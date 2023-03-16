@@ -48,6 +48,5 @@ project "icu"
 		"%{IncludeDir.icu}"
 	}
 
-	filter "toolset:msc"
-		buildoptions { "/utf-8" }
-		disablewarnings { "4996", "4244" }
+	filter "system:windows"
+		defines { "_CRT_SECURE_NO_WARNINGS" }
