@@ -1199,7 +1199,7 @@ public class NumberFormatterApiTest extends TestFmwk {
             "Prefix in the denominator: nanogram-per-picobarrel", "unit/nanogram-per-picobarrel",
             "unit/nanogram-per-picobarrel",
             NumberFormatter.with().unit(MeasureUnit.forIdentifier("nanogram-per-picobarrel")),
-            new ULocale("en-ZA"), 2.4, "2,4 ng/pbbl");
+            new ULocale("en-ZA"), 2.4, "2.4 ng/pbbl");
 
         assertFormatSingle("Prefix in the denominator: nanogram-per-picobarrel unit-width-full-name",
                            "unit/nanogram-per-picobarrel unit-width-full-name",
@@ -1207,7 +1207,7 @@ public class NumberFormatterApiTest extends TestFmwk {
                            NumberFormatter.with()
                                .unit(MeasureUnit.forIdentifier("nanogram-per-picobarrel"))
                                .unitWidth(UnitWidth.FULL_NAME),
-                           new ULocale("en-ZA"), 2.4, "2,4 nanograms per picobarrel");
+                           new ULocale("en-ZA"), 2.4, "2.4 nanograms per picobarrel");
 
         // Valid MeasureUnit, but unformattable, because we only have patterns for
         // pow2 and pow3 at this time:
@@ -1229,7 +1229,7 @@ public class NumberFormatterApiTest extends TestFmwk {
             NumberFormatter.with()
                 .unit(MeasureUnit.forIdentifier("kibijoule-foot-per-cubic-gigafurlong-square-second"))
                 .unitWidth(UnitWidth.FULL_NAME),
-            new ULocale("en-ZA"), 2.4, "2,4 kibijoule-feet per cubic gigafurlong-square second");
+            new ULocale("en-ZA"), 2.4, "2.4 kibijoule-feet per cubic gigafurlong-square second");
 
         assertFormatSingle(
             "kibijoule-foot-per-cubic-gigafurlong-square-second unit-width-full-name",
@@ -1250,7 +1250,7 @@ public class NumberFormatterApiTest extends TestFmwk {
             NumberFormatter.with()
                 .unit(MeasureUnit.forIdentifier("kilowatt-hour-per-100-kilometer"))
                 .unitWidth(UnitWidth.FULL_NAME),
-            new ULocale("en-ZA"), 2.4, "2,4 kilowatt-hours per 100 kilometres");
+            new ULocale("en-ZA"), 2.4, "2.4 kilowatt-hours per 100 kilometres");
     }
 
     // TODO: merge these tests into NumberSkeletonTest.java instead of here:
@@ -1453,11 +1453,11 @@ public class NumberFormatterApiTest extends TestFmwk {
                 "unit/meter usage/road",
                 unloc_formatter,
                 new ULocale("en-ZA"),
-                "87\u00A0650 km",
-                "8\u00A0765 km",
+                "87,650 km",
+                "8,765 km",
                 "876 km", // 6.5 rounds down, 7.5 rounds up.
                 "88 km",
-                "8,8 km",
+                "8.8 km",
                 "900 m",
                 "90 m",
                 "9 m",
@@ -1634,14 +1634,14 @@ public class NumberFormatterApiTest extends TestFmwk {
                        .precision(Precision.minMaxSignificantDigits(1, 4))
                        .unitWidth(UnitWidth.FULL_NAME),
                new ULocale("en-ZA"),
-               "8,765E1 square kilometres",
-               "8,765E0 square kilometres",
-               "8,765E1 hectares",
-               "8,765E0 hectares",
-               "8,765E3 square metres",
-               "8,765E2 square metres",
-               "8,765E1 square metres",
-               "8,765E0 square metres",
+               "8.765E1 square kilometres",
+               "8.765E0 square kilometres",
+               "8.765E1 hectares",
+               "8.765E0 hectares",
+               "8.765E3 square metres",
+               "8.765E2 square metres",
+               "8.765E1 square metres",
+               "8.765E0 square metres",
                "0E0 square centimetres");
 
         // TODO(icu-units#132): Java BigDecimal does not support Inf and NaN, so
@@ -2051,7 +2051,7 @@ public class NumberFormatterApiTest extends TestFmwk {
                         .precision(Precision.maxSignificantDigits(4)),
                 new ULocale("en-ZA"),
                 321.45, // 0.45 rounds down, 0.55 rounds up.
-                "3,214E2 m");
+                "3.214E2 m");
 
         assertFormatSingle(
                 "Scientific notation with Usage: possible when using a reasonable Precision",
@@ -2064,7 +2064,7 @@ public class NumberFormatterApiTest extends TestFmwk {
                         .unitWidth(UnitWidth.FULL_NAME),
                 new ULocale("en-ZA"),
                 1e20,
-                "1,5E28 kilometres");
+                "1.5E28 kilometres");
     }
 
 
@@ -5993,6 +5993,64 @@ public class NumberFormatterApiTest extends TestFmwk {
 
             assertEquals("test unit aliases", testCase.expectedFormat, actualFormat);
         }
+    }
+
+    @Test
+    public void testIssue22378() {
+        class TestCase {
+            final String localeId;
+            final String expectedFormat;
+
+            TestCase(String localeId, String expectedFormat) {
+                this.localeId = localeId;
+                this.expectedFormat = expectedFormat;
+            }
+        }
+
+        // I checked the results before the fix and everything works the same except
+        // "fr-FR-u-mu-fahrenhe" and "fr_FR@mu=fahrenhe"
+        final TestCase [] testCases = {
+                new TestCase("en-US", "73\u00B0F"),
+                new TestCase("en-US-u-mu-fahrenhe", "73\u00B0F"),
+                // WAI. "fahrenheit" is an invalid -u-mu- value, we get the default for en-US
+                new TestCase("en-US-u-mu-fahrenheit", "73\u00B0F"),
+                new TestCase("en-US-u-mu-celsius", "23\u00B0C"),
+                new TestCase("en-US-u-mu-badvalue", "73\u00B0F"),
+                new TestCase("en_US@mu=fahrenhe", "73\u00B0F"),
+                new TestCase("en_US@mu=fahrenheit", "73\u00B0F"),
+                new TestCase("en_US@mu=celsius", "23\u00B0C"),
+                new TestCase("en_US@mu=badvalue", "73\u00B0F"),
+
+                new TestCase("fr-FR", "23\u202F\u00B0C"),
+                new TestCase("fr-FR-u-mu-fahrenhe", "73\u202F\u00B0F"),
+                // WAI. Celsius because "fahrenheit" is an invalid -u-mu- value, we get the default for fr-FR
+                new TestCase("fr-FR-u-mu-fahrenheit", "23\u202F\u00B0C"),
+                new TestCase("fr-FR-u-mu-celsius", "23\u202F\u00B0C"),
+                new TestCase("fr-FR-u-mu-badvalue", "23\u202F\u00B0C"),
+                new TestCase("fr_FR@mu=fahrenhe", "73\u202F\u00B0F"),
+                new TestCase("fr_FR@mu=fahrenheit", "73\u202F\u00B0F"),
+                new TestCase("fr_FR@mu=celsius", "23\u202F\u00B0C"),
+                new TestCase("fr_FR@mu=badvalue", "23\u202F\u00B0C"),
+        };
+
+        final UnlocalizedNumberFormatter formatter = NumberFormatter.with()
+                .usage("weather")
+                .unit(MeasureUnit.CELSIUS);
+        final double value = 23.0;
+
+        for (TestCase testCase : testCases) {
+            String localeId = testCase.localeId;
+            ULocale locale = localeId.contains("@")
+                    ? new ULocale(localeId)
+                    : ULocale.forLanguageTag(localeId);
+            String actualFormat = formatter.locale(locale).format(value).toString();
+            assertEquals("-u-mu- honored (" + localeId + ")", testCase.expectedFormat, actualFormat);
+        }
+
+        String result = formatter.locale(Locale.US).format(value).getOutputUnit().getIdentifier();
+        assertEquals("Testing default -u-mu- for en-US", MeasureUnit.FAHRENHEIT.getIdentifier(), result);
+        result = formatter.locale(Locale.FRANCE).format(value).getOutputUnit().getIdentifier();
+        assertEquals("Testing default -u-mu- for fr-FR", MeasureUnit.CELSIUS.getIdentifier(), result);
     }
 
     static void assertFormatDescending(

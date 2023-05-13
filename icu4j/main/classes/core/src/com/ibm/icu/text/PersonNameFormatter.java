@@ -2,9 +2,7 @@
 // License & terms of use: http://www.unicode.org/copyright.html
 package com.ibm.icu.text;
 
-import java.util.HashSet;
 import java.util.Locale;
-import java.util.Set;
 
 import com.ibm.icu.impl.personname.PersonNameFormatterImpl;
 
@@ -323,5 +321,14 @@ public class PersonNameFormatter {
     @Deprecated
     public PersonNameFormatter(Locale locale, String[] patterns) {
         this.impl = new PersonNameFormatterImpl(locale, patterns);
+    }
+
+    /**
+     * @internal For debugging only!
+     * @deprecated This API is for debugging only.
+     */
+    @Override
+    public String toString() {
+        return impl.toString();
     }
 }

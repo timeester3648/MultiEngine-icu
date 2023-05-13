@@ -3871,8 +3871,9 @@ public class UnicodeSet extends UnicodeFilter implements Iterable<String>, Compa
     /**
      * Alias for {@link #CASE_INSENSITIVE}.
      *
-     * @stable ICU 3.8
+     * @deprecated ICU 73 Use {@link #CASE_INSENSITIVE} instead.
      */
+    @Deprecated
     public static final int CASE = 2;
 
     /**
@@ -4775,7 +4776,7 @@ public class UnicodeSet extends UnicodeFilter implements Iterable<String>, Compa
      * Same results as turning the code point into a string (with the [ugly] new StringBuilder().appendCodePoint(codepoint).toString())
      * and comparing, but much faster (no object creation).
      * Actually, there is one difference; a null compares as less.
-     * Note that this (=String) order is UTF-16 order -- *not* code point order.
+     * Note that this (=String) order is UTF-16 order -- <i>not</i> code point order.
      * @stable ICU 4.4
      */
 
@@ -4787,7 +4788,7 @@ public class UnicodeSet extends UnicodeFilter implements Iterable<String>, Compa
      * Utility to compare a string to a code point.
      * Same results as turning the code point into a string and comparing, but much faster (no object creation).
      * Actually, there is one difference; a null compares as less.
-     * Note that this (=String) order is UTF-16 order -- *not* code point order.
+     * Note that this (=String) order is UTF-16 order -- <i>not</i> code point order.
      * @stable ICU 4.4
      */
     public static int compare(int codePoint, CharSequence string) {

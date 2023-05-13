@@ -166,10 +166,10 @@ This work is done in the root of icu4j:
 1.  Make sure JAVA_HOME is set to JDK 8. This report creation fails with JDK 11.
     For example, in Linux:
     *   `export JAVA_HOME=/usr/lib/jvm/java-8-openjdk-amd64`
-2.  Then run ant task "clean" and "apireport" at <icu4j_root>:
+2.  Then run ant task "clean" and "apireport" at `<icu4j_root>`:
     *   `ant clean apireport`
 3.  Above will produce API change report file
-    <code><icu4j_root>/<b>out</b>/icu4j_compare_xxx_yyy.html</code>
+    `<icu4j_root>/<b>out</b>/icu4j_compare_xxx_yyy.html`
 4.  Make sure there are any new doc tag errors are reported. (As of ICU 4.4,
     ArabicShaping constants do not have proper tags - otherwise, clean)
 5.  Copy generated report file to `<icu4j_root>/APIChangeReport.html` and check
@@ -179,11 +179,6 @@ Once official release version is shipped, we need to keep API signature
 information file for next iteration. This is not done for milestone releases,
 only after the final official release.
 
-1.  Run ant task "gatherapi" at <icu4j_root>
-2.  Above will produce API signature information file
-    <icu4j_root>/out/icu4jxx.api2.gz
-3.  Copy icu4jxxapi2.gz to <icu4j_root>/tools/build and add it to the repository
-
 ---
 
 ## Check in API signature data file (ICU4J)
@@ -192,11 +187,12 @@ Once APIs are frozen for a reference release, we should check in the API
 signature data file into the repository. The data file will be used for future
 API change report.
 
-1.  Run ant task "gatherapi" at <icu4j_root>
-2.  The output file icu4j<ver>.api3.gz is created in <icu4j_root>/out directory.
-3.  Copy the output .gz file to <icu4j_root>/tools directory and check in the
+1.  Run ant task "gatherapi" at `<icu4j_root>`
+2.  Resolve any warnings before proceeding.
+3.  The output file `icu4j<ver>.api3.gz` is created in `<icu4j_root>/out` directory.
+4.  Copy the output .gz file to `<icu4j_root>/tools/build` directory and check in the
     file to the repository.
-4.  You may delete very old versions of the API signature files. Keeping 10
+5.  You may delete very old versions of the API signature files. Keeping 10
     versions to the latest should be good enough.
 
 Note: This task is only necessary for reference releases, because we won't
@@ -330,6 +326,9 @@ javadoc files. Create icu4c-X_X_X-docs.zip
     `cd <path>/icu4c/source/doc/html/`
 4.  Create a zip file, e.g.,<br>
     `tar cvfz /tmp/icu4c72rc.tar.gz * # Note: label the file apropriately for the release.
+5.  Edit [README.md in icu-docs](https://github.com/unicode-org/icu-docs/blob/main/README.md).
+6.  Update the table under "API docs" at the top of README.md with the new version in column "C" in row "Dev" for the release candidate or "Released" for the final release.
+7.  Add the updated README.md to the pull request with the new API documentation.
 
 
 #### Create a PR for ICU4C docs using the docs zip file
@@ -400,6 +399,11 @@ See [Upload API documentations](docs.md#upload-api-documentations) below for how
 See <https://unicode-org.github.io/icu-docs/HOWTO-Update.html> for instructions
 to upload to <https://unicode-org.github.io/icu-docs/>
 
+#### Update table of API docs:
+1. Edit [README.md in icu-docs](https://github.com/unicode-org/icu-docs/blob/main/README.md).
+2. Update the table under "API docs" at the top of README.md with the new version in column "J" in row "Dev" for the release candidate or "Released" for the final release.
+3. Add the updated README.md to the pull request with the new API documentation.
+    
 ### Update the Readme.html for GA
 
 If there are any last second changes:

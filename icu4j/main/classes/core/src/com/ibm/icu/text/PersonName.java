@@ -199,12 +199,13 @@ public interface PersonName {
 
     /**
      * An enum to specify the preferred field order for the name.
-     * @defat ICU 73
+     * @draft ICU 73
      */
     enum PreferredOrder {
         /**
          * Indicates the name has no preferred field order, and that the formatter should deduce the
          * proper field order based on the locales of the name and the formatter.
+         * @draft ICU 73
          */
         DEFAULT,
 
@@ -218,6 +219,7 @@ public interface PersonName {
         /**
          * Indicates that the name should be formatted in surname-first order, even when the formatter
          * would normally guess that it should be formatted in given-first order.
+         * @draft ICU 73
          */
         SURNAME_FIRST
     }
@@ -247,7 +249,7 @@ public interface PersonName {
      * Returns one field of the name, possibly in a modified form.
      *
      * @param identifier The identifier of the requested field.
-     * @param modifiers  An **IN/OUT** parameter that specifies modifiers to apply to the basic field value.
+     * @param modifiers  An <b>IN/OUT</b> parameter that specifies modifiers to apply to the basic field value.
      *                   An implementing class can choose to handle or ignore any modifiers; it should modify
      *                   the passed-in Set so that on exit, it contains only the requested modifiers that it
      *                   DIDN'T handle.  This parameter may not be null, and must either be mutable or empty.

@@ -94,9 +94,16 @@ public class SimplePersonName implements PersonName {
             if (fieldValues.get("surname") == null) {
                 String surnamePrefix = fieldValues.get("surname-prefix");
                 String surnameCore = fieldValues.get("surname-core");
+
+                StringBuilder sb = new StringBuilder();
                 if (surnamePrefix != null && surnameCore != null) {
                     fieldValues.put("surname", surnamePrefix + " " + surnameCore);
+                } else if (surnamePrefix != null) {
+                    fieldValues.put("surname", surnamePrefix);
+                } else if (surnameCore != null) {
+                    fieldValues.put("surname", surnameCore);
                 }
+                // if both "surname-prefix" and "surname-core" are empty, don't fill in "surname" either
             }
 
             return new SimplePersonName(locale, preferredOrder, fieldValues);
@@ -146,7 +153,6 @@ public class SimplePersonName implements PersonName {
      * else using the builder.
      * @return The name's preferred field order.
      * @draft ICU 73
-     * @return
      */
     @Override
     public PreferredOrder getPreferredOrder() { return preferredOrder; }
@@ -156,7 +162,7 @@ public class SimplePersonName implements PersonName {
      * provided at construction time, and this function will return them.  Otherwise, it ignores modifiers and
      * relies on PersonNameFormat's default modifier handling.
      * @param nameField The identifier of the requested field.
-     * @param modifiers An **IN/OUT** parameter that specifies modifiers to apply to the basic field value.
+     * @param modifiers An <b>IN/OUT</b> parameter that specifies modifiers to apply to the basic field value.
      *                  On return, this list will contain any modifiers that this object didn't handle.  This class
      *                  will always return this set unmodified, unless a modified version of the requested field
      *                  was provided at construction time.
@@ -200,6 +206,24 @@ public class SimplePersonName implements PersonName {
         result = fieldValues.get(winningKey);
         modifiers.removeAll(makeModifiersFromName(winningKey));
         return result;
+    }
+
+    /**
+     * @internal Debugging only!
+     * @deprecated This API is ICU internal only.
+     */
+    @Deprecated
+    @Override
+    public String toString() {
+        StringBuilder sb = new StringBuilder();
+        for (String key : fieldValues.keySet()) {
+            if (sb.length() > 0) {
+                sb.append(",");
+            }
+            sb.append(key + "=" + fieldValues.get(key));
+        }
+        sb.append(",locale=" + nameLocale);
+        return sb.toString();
     }
 
     private static String makeModifiedFieldName(NameField fieldName,
