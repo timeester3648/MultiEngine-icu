@@ -51,7 +51,7 @@ project "icu"
 
 	filter "toolset:msc"
 		buildoptions { "/utf-8" }
-		disablewarnings { "4244", "4996" }
+		disablewarnings { "4244", "4996", "4101" }
 
 	filter "system:windows"
 		defines { "_CRT_SECURE_NO_WARNINGS" }
