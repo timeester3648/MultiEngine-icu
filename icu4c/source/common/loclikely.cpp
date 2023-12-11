@@ -467,7 +467,14 @@ _uloc_addLikelySubtags(const char* localeID,
         goto error;
     }
     if (langLength > 3) {
-        goto error;
+        if (langLength == 4 && scriptLength == 0) {
+            langLength = 0;
+            scriptLength = 4;
+            uprv_memcpy(script, lang, 4);
+            lang[0] = '\0';
+        } else {
+            goto error;
+        }
     }
 
     /* Find the length of the trailing portion. */
@@ -479,7 +486,7 @@ _uloc_addLikelySubtags(const char* localeID,
 
     CHECK_TRAILING_VARIANT_SIZE(trailing, trailingLength);
     {
-        const icu::XLikelySubtags* likelySubtags = icu::XLikelySubtags::getSingleton(*err);
+        const icu::LikelySubtags* likelySubtags = icu::LikelySubtags::getSingleton(*err);
         if(U_FAILURE(*err)) {
             goto error;
         }
@@ -583,7 +590,7 @@ _uloc_minimizeSubtags(const char* localeID,
     CHECK_TRAILING_VARIANT_SIZE(trailing, trailingLength);
 
     {
-        const icu::XLikelySubtags* likelySubtags = icu::XLikelySubtags::getSingleton(*err);
+        const icu::LikelySubtags* likelySubtags = icu::LikelySubtags::getSingleton(*err);
         if(U_FAILURE(*err)) {
             goto error;
         }
@@ -782,6 +789,36 @@ U_NAMESPACE_END
 // The following must at least allow for rg key value (6) plus terminator (1).
 #define ULOC_RG_BUFLEN 8
 
+namespace {
+int GetRegionFromKey(const char *localeID, const char* key, char* buf) {
+    UErrorCode status = U_ZERO_ERROR;
+
+    // First check for rg keyword value
+    icu::CharString rg;
+    {
+        icu::CharStringByteSink sink(&rg);
+        ulocimp_getKeywordValue(localeID, key, sink, &status);
+    }
+    int32_t len = rg.length();
+    if (U_FAILURE(status) || len < 3 || len > 7) {
+        len = 0;
+    } else {
+        // chop off the subdivision code (which will generally be "zzzz" anyway)
+        const char* const data = rg.data();
+        if (uprv_isASCIILetter(data[0])) {
+            len = 2;
+            buf[0] = uprv_toupper(data[0]);
+            buf[1] = uprv_toupper(data[1]);
+        } else {
+            // assume three-digit region code
+            len = 3;
+            uprv_memcpy(buf, data, len);
+        }
+    }
+    return len;
+}
+}  // namespace
+
 U_CAPI int32_t U_EXPORT2
 ulocimp_getRegionForSupplementalData(const char *localeID, UBool inferRegion,
                                      char *region, int32_t regionCapacity, UErrorCode* status) {
@@ -789,48 +826,28 @@ ulocimp_getRegionForSupplementalData(const char *localeID, UBool inferRegion,
         return 0;
     }
     char rgBuf[ULOC_RG_BUFLEN];
-    UErrorCode rgStatus = U_ZERO_ERROR;
-
-    // First check for rg keyword value
-    icu::CharString rg;
-    {
-        icu::CharStringByteSink sink(&rg);
-        ulocimp_getKeywordValue(localeID, "rg", sink, &rgStatus);
-    }
-    int32_t rgLen = rg.length();
-    if (U_FAILURE(rgStatus) || rgLen < 3 || rgLen > 7) {
-        rgLen = 0;
-    } else {
-        // chop off the subdivision code (which will generally be "zzzz" anyway)
-        const char* const data = rg.data();
-        if (uprv_isASCIILetter(data[0])) {
-            rgLen = 2;
-            rgBuf[0] = uprv_toupper(data[0]);
-            rgBuf[1] = uprv_toupper(data[1]);
-        } else {
-            // assume three-digit region code
-            rgLen = 3;
-            uprv_memcpy(rgBuf, data, rgLen);
-        }
-    }
-
+    int32_t rgLen = GetRegionFromKey(localeID, "rg", rgBuf);
     if (rgLen == 0) {
         // No valid rg keyword value, try for unicode_region_subtag
         rgLen = uloc_getCountry(localeID, rgBuf, ULOC_RG_BUFLEN, status);
         if (U_FAILURE(*status)) {
             rgLen = 0;
         } else if (rgLen == 0 && inferRegion) {
-            // no unicode_region_subtag but inferRegion true, try likely subtags
-            rgStatus = U_ZERO_ERROR;
-            icu::CharString locBuf;
-            {
-                icu::CharStringByteSink sink(&locBuf);
-                ulocimp_addLikelySubtags(localeID, sink, &rgStatus);
-            }
-            if (U_SUCCESS(rgStatus)) {
-                rgLen = uloc_getCountry(locBuf.data(), rgBuf, ULOC_RG_BUFLEN, status);
-                if (U_FAILURE(*status)) {
-                    rgLen = 0;
+            // Second check for sd keyword value
+            rgLen = GetRegionFromKey(localeID, "sd", rgBuf);
+            if (rgLen == 0) {
+                // no unicode_region_subtag but inferRegion true, try likely subtags
+                UErrorCode rgStatus = U_ZERO_ERROR;
+                icu::CharString locBuf;
+                {
+                    icu::CharStringByteSink sink(&locBuf);
+                    ulocimp_addLikelySubtags(localeID, sink, &rgStatus);
+                }
+                if (U_SUCCESS(rgStatus)) {
+                    rgLen = uloc_getCountry(locBuf.data(), rgBuf, ULOC_RG_BUFLEN, status);
+                    if (U_FAILURE(*status)) {
+                        rgLen = 0;
+                    }
                 }
             }
         }

@@ -144,6 +144,8 @@ void RBBITest::runIndexedTest( int32_t index, UBool exec, const char* &name, cha
     TESTCASE_AUTO(TestRandomAccess);
     TESTCASE_AUTO(TestExternalBreakEngineWithFakeTaiLe);
     TESTCASE_AUTO(TestExternalBreakEngineWithFakeYue);
+    TESTCASE_AUTO(TestBug22581);
+    TESTCASE_AUTO(TestBug22584);
 
 #if U_ENABLE_TRACING
     TESTCASE_AUTO(TestTraceCreateCharacter);
@@ -4178,6 +4180,7 @@ void RBBITest::RunMonkey(BreakIterator *bi, RBBIMonkeyKind &mk, const char *name
             expectedBreaks[breakPos] = 1;
             expectedCount++;
             U_ASSERT(expectedCount<testText.length());
+	    (void)expectedCount;  // Used by U_ASSERT().
         }
 
         // Find the break positions using forward iteration
@@ -5857,4 +5860,26 @@ void RBBITest::TestExternalBreakEngineWithFakeTaiLe() {
                expected2 == actual2);
 }
 
+void RBBITest::TestBug22584() {
+    // Creating a break iterator from a rule consisting of a very long
+    // literal input string caused a stack overflow when deleting the
+    // parse tree for the input during the rule building process.
+
+    // Failure of this test showed as a crash during the break iterator construction.
+
+    UnicodeString ruleStr(100000, (UChar32)0, 100000);
+    UParseError pe {};
+    UErrorCode ec {U_ZERO_ERROR};
+
+    RuleBasedBreakIterator bi(ruleStr, pe, ec);
+}
+
+void RBBITest::TestBug22581() {
+    // Test duplicate variable setting will not leak the rule compilation
+    UnicodeString ruleStr = u"$foo=[abc]; $foo=[xyz]; $foo;";
+    UParseError pe {};
+    UErrorCode ec {U_ZERO_ERROR};
+
+    RuleBasedBreakIterator bi(ruleStr, pe, ec);
+}
 #endif // #if !UCONFIG_NO_BREAK_ITERATION

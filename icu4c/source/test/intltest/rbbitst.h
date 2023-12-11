@@ -98,6 +98,8 @@ public:
     void TestRandomAccess();
     void TestExternalBreakEngineWithFakeTaiLe();
     void TestExternalBreakEngineWithFakeYue();
+    void TestBug22581();
+    void TestBug22584();
 
 #if U_ENABLE_TRACING
     void TestTraceCreateCharacter();
