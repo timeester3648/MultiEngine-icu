@@ -148,8 +148,8 @@ AC_SUBST(ENABLE_RELEASE)
 
 # Checks for compilers
 AC_PROG_CC([clang gcc cc c99 c89 xlc_r xlc cl.exe icc])
-# Make sure that we try clang++ first, which provides C++11 support.
-# The g++ compiler is less likely to support C++11.
+# Make sure that we try clang++ first, which provides C++17 support.
+# The g++ compiler is less likely to support C++17.
 AC_PROG_CXX([clang++ g++ c++ gpp xlC_r xlC aCC CC cxx cc++ cl.exe icc FCC KCC RCC])
 
 # pkg-config is needed for harfbuzz support
@@ -173,6 +173,21 @@ if test "$GCC" = yes; then
         fi
         if test "$ENABLE_RELEASE" = 1; then
             CXXFLAGS="$CXXFLAGS -O2"
+        fi
+    fi
+    # if CFLAGS does not have a "-std=" setting, set it now to -std=c11,
+    # and check that the compiler still works.
+    if ! echo "$CFLAGS" | grep '\-std=' >/dev/null 2>&1; then
+        OLD_CFLAGS="${CFLAGS}"
+        CFLAGS="$CFLAGS -std=c11"
+        AC_MSG_CHECKING([[if we have a C11 compiler]])
+        AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[]],[[]])],[c11_okay=yes],[c11_okay=no])
+        AC_MSG_RESULT($c11_okay)
+        if [[ $c11_okay = yes ]]; then
+            AC_MSG_NOTICE([Adding CFLAGS option -std=c11])
+            UCONFIG_CFLAGS="${UCONFIG_CFLAGS} -std=c11"
+        else
+            CFLAGS="$OLD_CFLAGS"
         fi
     fi
 fi
@@ -513,17 +528,17 @@ else
 fi
 
 if [[ "$GXX" = yes ]]; then
-    # if CXXFLAGS does not have a "-std=" setting, set it now to -std=c++11,
+    # if CXXFLAGS does not have a "-std=" setting, set it now to -std=c++17,
     # and check that the compiler still works.
     if ! echo "$CXXFLAGS" | grep '\-std=' >/dev/null 2>&1; then
         OLD_CXXFLAGS="${CXXFLAGS}"
-        CXXFLAGS="$CXXFLAGS -std=c++11"
-        AC_MSG_CHECKING([[if we have a C++11 compiler]])
-        AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[]],[[]])],[cxx11_okay=yes],[cxx11_okay=no])
-        AC_MSG_RESULT($cxx11_okay)
-        if [[ $cxx11_okay = yes ]]; then
-            AC_MSG_NOTICE([Adding CXXFLAGS option -std=c++11])
-            UCONFIG_CXXFLAGS="${UCONFIG_CXXFLAGS} -std=c++11"
+        CXXFLAGS="$CXXFLAGS -std=c++17"
+        AC_MSG_CHECKING([[if we have a C++17 compiler]])
+        AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[]],[[]])],[cxx17_okay=yes],[cxx17_okay=no])
+        AC_MSG_RESULT($cxx17_okay)
+        if [[ $cxx17_okay = yes ]]; then
+            AC_MSG_NOTICE([Adding CXXFLAGS option -std=c++17])
+            UCONFIG_CXXFLAGS="${UCONFIG_CXXFLAGS} -std=c++17"
         else
             CXXFLAGS="$OLD_CXXFLAGS"
         fi
@@ -897,14 +912,6 @@ else
     U_HAVE_STRTOD_L=0
 fi
 AC_SUBST(U_HAVE_STRTOD_L)
-
-# Check if C++17 std::string_view is available.
-AC_LANG_PUSH([C++])
-AC_CHECK_TYPE(std::string_view, [], [], [[#include <string_view>]])
-if test "x$ac_cv_type_std__string_view" = xyes; then :
-  CONFIG_CPPFLAGS="${CONFIG_CPPFLAGS} -DU_HAVE_STRING_VIEW=1"
-fi
-AC_LANG_POP([C++])
 
 # Checks for typedefs
 AC_CHECK_TYPE(int8_t,signed char)

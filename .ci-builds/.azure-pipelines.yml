@@ -164,7 +164,7 @@ jobs:
       displayName: 'Build only (WarningsAsErrors)'
       env:
         CC: clang-16
-        CPPFLAGS: '-Werror -Wno-strict-prototypes -Wno-gnu-offsetof-extensions -Wall -Wextra -Wextra-semi -Wundef -Wnon-virtual-dtor -Wsuggest-override'
+        CPPFLAGS: '-Werror -Wno-strict-prototypes -Wall -Wextra -Wextra-semi -Wundef -Wnon-virtual-dtor -Wsuggest-override'
         CXX: clang++-16
 #-------------------------------------------------------------------------
 - job: ICU4C_Clang16_Cpp20_Ubuntu_2004
@@ -188,7 +188,7 @@ jobs:
       displayName: 'Build and Test'
       env:
         CC: clang-16
-        CPPFLAGS: '-Werror -Wno-strict-prototypes -Wno-gnu-offsetof-extensions'
+        CPPFLAGS: '-Werror -Wno-strict-prototypes'
         CXX: clang++-16
         CXXFLAGS: '-std=c++20'
 #-------------------------------------------------------------------------
@@ -213,7 +213,7 @@ jobs:
       displayName: 'Build and Test'
       env:
         CC: clang-16
-        CPPFLAGS: '-Werror -Wno-strict-prototypes -Wno-gnu-offsetof-extensions'
+        CPPFLAGS: '-Werror -Wno-strict-prototypes'
         CXX: clang++-16
         CXXFLAGS: '-std=c++20 -stdlib=libc++'
 #-------------------------------------------------------------------------
@@ -510,62 +510,6 @@ jobs:
         filename: icu4c/source/allinone/icucheck.bat
         arguments: 'x86 Debug'
 #-------------------------------------------------------------------------
-# VS2019 using the VS2017 toolset builds
-#-------------------------------------------------------------------------
-- job: ICU4C_MSVC_x64_Release_VS2017
-  displayName: 'C: MSVC 64-bit Release (VS 2017)'
-  timeoutInMinutes: 30
-  pool:
-    vmImage: 'windows-2019'
-    demands:
-      - msbuild
-      - visualstudio
-      - Cmd
-  steps:
-    - checkout: self
-      lfs: true
-      fetchDepth: 10
-    - task: VSBuild@1
-      displayName: 'Build Solution'
-      inputs:
-        solution: icu4c/source/allinone/allinone.sln
-        platform: x64
-        configuration: Release
-        msbuildArgs: /p:DefaultPlatformToolset=v141
-    - task: BatchScript@1
-      displayName: 'Run Tests (icucheck.bat)'
-      inputs:
-        filename: icu4c/source/allinone/icucheck.bat
-        arguments: 'x64 Release'
-#-------------------------------------------------------------------------
-# VS2019 using the VS2015 toolset
-#-------------------------------------------------------------------------
-- job: ICU4C_MSVC_x64_Release_VS2015
-  displayName: 'C: MSVC 64-bit Release (VS 2015)'
-  timeoutInMinutes: 30
-  pool:
-    vmImage: 'windows-2019'
-    demands: 
-      - msbuild
-      - visualstudio
-      - Cmd
-  steps:
-    - checkout: self
-      lfs: true
-      fetchDepth: 10
-    - task: VSBuild@1
-      displayName: 'Build Solution'
-      inputs:
-        solution: icu4c/source/allinone/allinone.sln
-        platform: x64
-        configuration: Release
-        msbuildArgs: /p:SkipUWP=true /p:DefaultPlatformToolset=v140 /p:AutodetectWin10SDK=true
-    - task: BatchScript@1
-      displayName: 'Run Tests (icucheck.bat)'
-      inputs:
-        filename: icu4c/source/allinone/icucheck.bat
-        arguments: 'x64 Release'
-#-------------------------------------------------------------------------
 - job: ICU4C_MSYS2_GCC_x86_64_Release
   displayName: 'C: MSYS2 GCC x86_64 Release'
   timeoutInMinutes: 45
@@ -744,9 +688,7 @@ jobs:
         mkdir -p icuexportdata/segmenter/dictionary
         for FILE in `ls data/brkitr/dictionaries`
         do
-          ./bin/gendict --uchars data/brkitr/dictionaries/$FILE /dev/stdout | \
-          python3 -c 'import sys; data = sys.stdin.buffer.read(); print(f"trie_data = {[data[i + 1] << 8 | data[i] for i in range(64, len(data) - 1, 2)]}")' \
-          > icuexportdata/segmenter/dictionary/`basename $FILE .txt`.toml
+          ./bin/gendict --uchars --toml data/brkitr/dictionaries/$FILE icuexportdata/segmenter/dictionary/`basename $FILE .txt`.toml
         done
       displayName: 'Build segmenter dictionary files'
       env:

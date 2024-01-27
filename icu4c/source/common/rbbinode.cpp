@@ -150,7 +150,7 @@ void RBBINode::NRDeleteNode(RBBINode *node) {
 
     RBBINode *stopNode = node->fParent;
     RBBINode *nextNode = node;
-    while (nextNode != stopNode) {
+    while (nextNode != stopNode && nextNode != nullptr) {
         RBBINode *currentNode = nextNode;
 
         if ((currentNode->fLeftChild == nullptr && currentNode->fRightChild == nullptr) ||
@@ -158,10 +158,12 @@ void RBBINode::NRDeleteNode(RBBINode *node) {
                 currentNode->fType == setRef) {      // own their children nodes.
             // CurrentNode is effectively a leaf node; it's safe to go ahead and delete it.
             nextNode = currentNode->fParent;
-            if (nextNode->fLeftChild == currentNode) {
-                nextNode->fLeftChild = nullptr;
-            } else if (nextNode->fRightChild == currentNode) {
-                nextNode->fRightChild = nullptr;
+            if (nextNode) {
+                if (nextNode->fLeftChild == currentNode) {
+                    nextNode->fLeftChild = nullptr;
+                } else if (nextNode->fRightChild == currentNode) {
+                    nextNode->fRightChild = nullptr;
+                }
             }
             delete currentNode;
         } else if (currentNode->fLeftChild) {
@@ -237,7 +239,17 @@ RBBINode *RBBINode::cloneTree() {
 //                      nested references are handled by cloneTree(), not here.
 //
 //-------------------------------------------------------------------------
-RBBINode *RBBINode::flattenVariables() {
+constexpr int kRecursiveDepthLimit = 3500;
+RBBINode *RBBINode::flattenVariables(UErrorCode& status, int depth) {
+    if (U_FAILURE(status)) {
+        return this;
+    }
+    // If the depth of the stack is too deep, we return U_INPUT_TOO_LONG_ERROR
+    // to avoid stack overflow crash.
+    if (depth > kRecursiveDepthLimit) {
+        status = U_INPUT_TOO_LONG_ERROR;
+        return this;
+    }
     if (fType == varRef) {
         RBBINode *retNode  = fLeftChild->cloneTree();
         if (retNode != nullptr) {
@@ -249,11 +261,11 @@ RBBINode *RBBINode::flattenVariables() {
     }
 
     if (fLeftChild != nullptr) {
-        fLeftChild = fLeftChild->flattenVariables();
+        fLeftChild = fLeftChild->flattenVariables(status, depth+1);
         fLeftChild->fParent  = this;
     }
     if (fRightChild != nullptr) {
-        fRightChild = fRightChild->flattenVariables();
+        fRightChild = fRightChild->flattenVariables(status, depth+1);
         fRightChild->fParent = this;
     }
     return this;

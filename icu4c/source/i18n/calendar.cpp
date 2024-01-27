@@ -1462,7 +1462,7 @@ void Calendar::computeFields(UErrorCode &ec)
     // 11/6/00
 
     int32_t millisInDay;
-    int32_t days = ClockMath::floorDivide(localMillis, kOneDay, &millisInDay);
+    int32_t days = ClockMath::floorDivide(localMillis, U_MILLIS_PER_DAY, &millisInDay);
 
     internalSet(UCAL_JULIAN_DAY,days + kEpochStartAsJulianDay);
 
@@ -3699,7 +3699,8 @@ int32_t Calendar::handleGetMonthLength(int32_t extendedYear, int32_t month) cons
         handleComputeMonthStart(extendedYear, month, true);
 }
 
-int32_t Calendar::handleGetYearLength(int32_t eyear) const  {
+int32_t Calendar::handleGetYearLength(int32_t eyear) const
+{
     return handleComputeMonthStart(eyear+1, 0, false) -
         handleComputeMonthStart(eyear, 0, false);
 }
