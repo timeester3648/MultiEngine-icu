@@ -1,0 +1,39 @@
+void main(MultiBuild::Workspace& workspace) {	
+	auto project = workspace.create_project(".");
+	auto properties = project.properties();
+
+	properties.name("icu");
+	properties.binary_object_kind(MultiBuild::BinaryObjectKind::eStaticLib);
+	properties.license("./LICENSE");
+	// TODO: remove when compilation errors fixed
+	properties.cpp_dialect(MultiBuild::LanguageDialectCpp::e14);
+
+	properties.tags("utf8");
+
+	project.include_own_required_includes(true);
+	project.add_required_project_include({
+		"./icu4c/source/*"
+	});
+
+	properties.files({
+		"./icu4c/source/stubdata/**.h",
+		"./icu4c/source/stubdata/**.c",
+		"./icu4c/source/stubdata/**.cpp"
+	});
+
+	properties.defines({
+		"U_IO_IMPLEMENTATION",
+		"U_I18N_IMPLEMENTATION",
+		"U_COMMON_IMPLEMENTATION"
+	});
+
+	{
+		MultiBuild::ScopedFilter _(workspace, "project.compiler:VisualCpp");
+		properties.disable_warnings({ "4244", "4996", "4101" });
+	}
+
+	{
+		MultiBuild::ScopedFilter _(workspace, "config.platform:Windows");
+		properties.defines("_CRT_SECURE_NO_WARNINGS");
+	}
+}
