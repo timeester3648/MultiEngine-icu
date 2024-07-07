@@ -2,11 +2,11 @@ void main(MultiBuild::Workspace& workspace) {
 	auto project = workspace.create_project(".");
 	auto properties = project.properties();
 
-	properties.name("icu");
+	project.name("icu");
 	properties.binary_object_kind(MultiBuild::BinaryObjectKind::eStaticLib);
-	properties.license("./LICENSE");
+	project.license("./LICENSE");
 	// TODO: remove when compilation errors fixed
-	properties.cpp_dialect(MultiBuild::LanguageDialectCpp::e14);
+	properties.cpp_dialect(MultiBuild::LangDialectCpp::e14);
 
 	properties.tags("utf8");
 
