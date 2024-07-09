@@ -18,7 +18,19 @@ void main(MultiBuild::Workspace& workspace) {
 	properties.files({
 		"./icu4c/source/stubdata/**.h",
 		"./icu4c/source/stubdata/**.c",
-		"./icu4c/source/stubdata/**.cpp"
+		"./icu4c/source/stubdata/**.cpp",
+
+		"./icu4c/source/IO/**.h",
+		"./icu4c/source/IO/**.c",
+		"./icu4c/source/IO/**.cpp",
+
+		"./icu4c/source/i18n/**.h",
+		"./icu4c/source/i18n/**.c",
+		"./icu4c/source/i18n/**.cpp",
+
+		"./icu4c/source/common/**.h",
+		"./icu4c/source/common/**.c",
+		"./icu4c/source/common/**.cpp"
 	});
 
 	properties.defines({
