@@ -6,7 +6,7 @@ void main(MultiBuild::Workspace& workspace) {
 	properties.binary_object_kind(MultiBuild::BinaryObjectKind::eStaticLib);
 	project.license("./LICENSE");
 	// TODO: remove when compilation errors fixed
-	properties.cpp_dialect(MultiBuild::LangDialectCpp::e14);
+	properties.cpp_dialect(MultiBuild::LangDialectCpp::e17);
 
 	properties.tags("utf8");
 
