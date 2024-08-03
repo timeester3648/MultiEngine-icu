@@ -230,7 +230,6 @@ it{
         gmh{"tedesco medio alto"}
         gn{"guaraní"}
         goh{"tedesco antico alto"}
-        gom{"konkani goano"}
         gon{"gondi"}
         gor{"gorontalo"}
         got{"gotico"}
@@ -925,7 +924,6 @@ it{
             phonebook{"Ordinamento Elenco telefonico"}
             phonetic{"Ordinamento fonetico"}
             pinyin{"Ordinamento pinyin"}
-            reformed{"Ordinamento riformato"}
             search{"Ricerca generica"}
             searchjl{"Cerca per consonante hangul iniziale"}
             standard{"Ordinamento standard"}

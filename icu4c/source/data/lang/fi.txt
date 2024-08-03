@@ -234,7 +234,6 @@ fi{
         gmh{"keskiyläsaksa"}
         gn{"guarani"}
         goh{"muinaisyläsaksa"}
-        gom{"goankonkani"}
         gon{"gondi"}
         gor{"gorontalo"}
         got{"gootti"}
@@ -992,7 +991,6 @@ fi{
             phonebook{"puhelinluettelojärjestys"}
             phonetic{"äänteellinen järjestys"}
             pinyin{"pinyin-järjestys"}
-            reformed{"uudistettu järjestys"}
             search{"yleishakujärjestys"}
             searchjl{"haku hangul-alkukonsonantin mukaan"}
             standard{"normaalijärjestys"}

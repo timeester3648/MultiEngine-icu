@@ -26,24 +26,6 @@ AC_CONFIG_SRCDIR([common/unicode/utypes.h])
 PACKAGE="icu"
 AC_SUBST(PACKAGE)
 
-# Use custom echo test for newline option
-# Current autoconf (2.65) gives incorrect echo newline option
-# for icu-config
-# This may be removed later - mow (June 17, 2010)
-ICU_ECHO_C= ICU_ECHO_N= ICU_ECHO_T=
-case `/bin/sh -c "echo -n x"` in
--n*)
-  case `/bin/sh -c "echo 'x\c'"` in
-  *c*) ICU_ECHO_T=' ';;     # ECHO_T is single tab character.
-  *)   ICU_ECHO_C='\c';;
-  esac;;
-*)
-  ICU_ECHO_N='-n';;
-esac
-AC_SUBST(ICU_ECHO_N)
-AC_SUBST(ICU_ECHO_C)
-AC_SUBST(ICU_ECHO_T)
-
 AC_MSG_CHECKING(for ICU version numbers)
 
 # Get the ICU version from uversion.h or other headers
@@ -147,10 +129,8 @@ AC_SUBST(ENABLE_RELEASE)
 : ${CXXFLAGS=""}
 
 # Checks for compilers
-AC_PROG_CC([clang gcc cc c99 c89 xlc_r xlc cl.exe icc])
-# Make sure that we try clang++ first, which provides C++17 support.
-# The g++ compiler is less likely to support C++17.
-AC_PROG_CXX([clang++ g++ c++ gpp xlC_r xlC aCC CC cxx cc++ cl.exe icc FCC KCC RCC])
+AC_PROG_CC([cc clang gcc c99 c89 xlc_r xlc cl.exe icc])
+AC_PROG_CXX([c++ clang++ g++ gpp xlC_r xlC aCC CC cxx cc++ cl.exe icc FCC KCC RCC])
 
 # pkg-config is needed for harfbuzz support
 PKG_PROG_PKG_CONFIG([0.20])
@@ -197,11 +177,6 @@ AC_PROG_CPP
 AC_PROG_INSTALL
 
 AC_SUBST(cross_compiling)
-
-dnl use the pld hack to get ac_fn_cxx_try_link defined globally and not local
-AC_LANG_PUSH([C++])
-AC_LINK_IFELSE([AC_LANG_PROGRAM()])
-AC_LANG_POP([C++])
 
 # make sure install is relative to srcdir - if a script
 if test "$srcdir" = "."; then
@@ -685,22 +660,7 @@ AC_SUBST(GENCCODE_ASSEMBLY)
 AC_MSG_RESULT($GENCCODE_ASSEMBLY)
 
 # Checks for header files
-AC_CHECK_HEADERS(inttypes.h)
-if test $ac_cv_header_inttypes_h = no; then
- U_HAVE_INTTYPES_H=0
- CONFIG_CPPFLAGS="${CONFIG_CPPFLAGS} -DU_HAVE_INTTYPES_H=0"
-else
- U_HAVE_INTTYPES_H=1
-fi
-if test "$CC" = ccc; then
- AC_MSG_RESULT("C compiler set to CCC ${CC}" )
- case "${host}" in
-        alpha*-*-*) U_HAVE_INTTYPES_H=0;
-        CONFIG_CPPFLAGS="${CONFIG_CPPFLAGS} -DU_HAVE_INTTYPES_H=0"
- esac
-fi
 
-AC_SUBST(U_HAVE_INTTYPES_H)
 
 AC_CHECK_HEADERS(dirent.h)
 if test $ac_cv_header_dirent_h = no; then
@@ -912,48 +872,6 @@ else
     U_HAVE_STRTOD_L=0
 fi
 AC_SUBST(U_HAVE_STRTOD_L)
-
-# Checks for typedefs
-AC_CHECK_TYPE(int8_t,signed char)
-AC_CHECK_TYPE(uint8_t,unsigned char)
-AC_CHECK_TYPE(int16_t,signed short)
-AC_CHECK_TYPE(uint16_t,unsigned short)
-AC_CHECK_TYPE(int32_t,signed long)
-AC_CHECK_TYPE(uint32_t,unsigned long)
-AC_CHECK_TYPE(int64_t,signed long long)
-AC_CHECK_TYPE(uint64_t,unsigned long long)
-
-if test $ac_cv_type_int8_t = no; then
-CONFIG_CPPFLAGS="${CONFIG_CPPFLAGS} -DU_HAVE_INT8_T=0"
-fi
-
-if test $ac_cv_type_uint8_t = no; then
-CONFIG_CPPFLAGS="${CONFIG_CPPFLAGS} -DU_HAVE_UINT8_T=0"
-fi
-
-if test $ac_cv_type_int16_t = no; then
-CONFIG_CPPFLAGS="${CONFIG_CPPFLAGS} -DU_HAVE_INT16_T=0"
-fi
-
-if test $ac_cv_type_uint16_t = no; then
-CONFIG_CPPFLAGS="${CONFIG_CPPFLAGS} -DU_HAVE_UINT16_T=0"
-fi
-
-if test $ac_cv_type_int32_t = no; then
-CONFIG_CPPFLAGS="${CONFIG_CPPFLAGS} -DU_HAVE_INT32_T=0"
-fi
-
-if test $ac_cv_type_uint32_t = no; then
-CONFIG_CPPFLAGS="${CONFIG_CPPFLAGS} -DU_HAVE_UINT32_T=0"
-fi
-
-if test $ac_cv_type_int64_t = no; then
-CONFIG_CPPFLAGS="${CONFIG_CPPFLAGS} -DU_HAVE_INT64_T=0"
-fi
-
-if test $ac_cv_type_uint64_t = no; then
-CONFIG_CPPFLAGS="${CONFIG_CPPFLAGS} -DU_HAVE_UINT64_T=0"
-fi
 
 # Do various wchar_t related checks
 AC_CHECK_HEADER(wchar.h)
@@ -1414,8 +1332,7 @@ AC_CONFIG_FILES([icudefs.mk \
 		test/perf/utrie2perf/Makefile \
 		test/perf/leperf/Makefile \
 		test/fuzzer/Makefile \
-		samples/Makefile samples/date/Makefile \
-		samples/cal/Makefile samples/layout/Makefile])
+		samples/Makefile])
 AC_OUTPUT
 
 if test -z "$PYTHON";

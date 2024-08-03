@@ -230,7 +230,6 @@ pl{
         gmh{"średnio-wysoko-niemiecki"}
         gn{"guarani"}
         goh{"staro-wysoko-niemiecki"}
-        gom{"konkani (Goa)"}
         gon{"gondi"}
         gor{"gorontalo"}
         got{"gocki"}
@@ -905,7 +904,6 @@ pl{
             phonebook{"porządek sortowania książki telefonicznej"}
             phonetic{"sortowanie fonetyczne"}
             pinyin{"porządek sortowania pinyin"}
-            reformed{"sortowanie zreformowane"}
             search{"wyszukiwanie ogólnego zastosowania"}
             searchjl{"Wyszukiwanie według początkowej spółgłoski hangul"}
             standard{"standardowa kolejność sortowania"}

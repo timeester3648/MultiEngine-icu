@@ -74,8 +74,9 @@ uloc_key_type_cleanup() {
 
 U_CDECL_END
 
+namespace {
 
-static void U_CALLCONV
+void U_CALLCONV
 initFromResourceBundle(UErrorCode& sts) {
     U_NAMESPACE_USE
     ucln_common_registerCleanup(UCLN_COMMON_LOCALE_KEY_TYPE, uloc_key_type_cleanup);
@@ -141,7 +142,7 @@ initFromResourceBundle(UErrorCode& sts) {
             bcpKeyId = bcpKeyIdBuf->data();
         }
 
-        UBool isTZ = uprv_strcmp(legacyKeyId, "timezone") == 0;
+        bool isTZ = uprv_strcmp(legacyKeyId, "timezone") == 0;
 
         UHashtable* typeDataMap = uhash_open(uhash_hashIChars, uhash_compareIChars, nullptr, &sts);
         if (U_FAILURE(sts)) {
@@ -351,7 +352,7 @@ initFromResourceBundle(UErrorCode& sts) {
     }
 }
 
-static UBool
+bool
 init() {
     UErrorCode sts = U_ZERO_ERROR;
     umtx_initOnce(gLocExtKeyMapInitOnce, &initFromResourceBundle, sts);
@@ -361,7 +362,7 @@ init() {
     return true;
 }
 
-static UBool
+bool
 isSpecialTypeCodepoints(const char* val) {
     int32_t subtagLen = 0;
     const char* p = val;
@@ -383,7 +384,7 @@ isSpecialTypeCodepoints(const char* val) {
     return (subtagLen >= 4 && subtagLen <= 6);
 }
 
-static UBool
+bool
 isSpecialTypeReorderCode(const char* val) {
     int32_t subtagLen = 0;
     const char* p = val;
@@ -403,7 +404,7 @@ isSpecialTypeReorderCode(const char* val) {
     return (subtagLen >=3 && subtagLen <=8);
 }
 
-static UBool
+bool
 isSpecialTypeRgKeyValue(const char* val) {
     int32_t subtagLen = 0;
     const char* p = val;
@@ -419,56 +420,48 @@ isSpecialTypeRgKeyValue(const char* val) {
     return (subtagLen == 6);
 }
 
-U_CFUNC const char*
+}  // namespace
+
+U_EXPORT const char*
 ulocimp_toBcpKey(const char* key) {
     if (!init()) {
         return nullptr;
     }
 
-    LocExtKeyData* keyData = (LocExtKeyData*)uhash_get(gLocExtKeyMap, key);
+    LocExtKeyData* keyData = static_cast<LocExtKeyData*>(uhash_get(gLocExtKeyMap, key));
     if (keyData != nullptr) {
         return keyData->bcpId;
     }
     return nullptr;
 }
 
-U_CFUNC const char*
+U_EXPORT const char*
 ulocimp_toLegacyKey(const char* key) {
     if (!init()) {
         return nullptr;
     }
 
-    LocExtKeyData* keyData = (LocExtKeyData*)uhash_get(gLocExtKeyMap, key);
+    LocExtKeyData* keyData = static_cast<LocExtKeyData*>(uhash_get(gLocExtKeyMap, key));
     if (keyData != nullptr) {
         return keyData->legacyId;
     }
     return nullptr;
 }
 
-U_CFUNC const char*
-ulocimp_toBcpType(const char* key, const char* type, UBool* isKnownKey, UBool* isSpecialType) {
-    if (isKnownKey != nullptr) {
-        *isKnownKey = false;
-    }
-    if (isSpecialType != nullptr) {
-        *isSpecialType = false;
-    }
-
+U_EXPORT const char*
+ulocimp_toBcpType(const char* key, const char* type) {
     if (!init()) {
         return nullptr;
     }
 
-    LocExtKeyData* keyData = (LocExtKeyData*)uhash_get(gLocExtKeyMap, key);
+    LocExtKeyData* keyData = static_cast<LocExtKeyData*>(uhash_get(gLocExtKeyMap, key));
     if (keyData != nullptr) {
-        if (isKnownKey != nullptr) {
-            *isKnownKey = true;
-        }
-        LocExtType* t = (LocExtType*)uhash_get(keyData->typeMap.getAlias(), type);
+        LocExtType* t = static_cast<LocExtType*>(uhash_get(keyData->typeMap.getAlias(), type));
         if (t != nullptr) {
             return t->bcpId;
         }
         if (keyData->specialTypes != SPECIALTYPE_NONE) {
-            UBool matched = false;
+            bool matched = false;
             if (keyData->specialTypes & SPECIALTYPE_CODEPOINTS) {
                 matched = isSpecialTypeCodepoints(type);
             }
@@ -479,9 +472,6 @@ ulocimp_toBcpType(const char* key, const char* type, UBool* isKnownKey, UBool* i
                 matched = isSpecialTypeRgKeyValue(type);
             }
             if (matched) {
-                if (isSpecialType != nullptr) {
-                    *isSpecialType = true;
-                }
                 return type;
             }
         }
@@ -490,30 +480,20 @@ ulocimp_toBcpType(const char* key, const char* type, UBool* isKnownKey, UBool* i
 }
 
 
-U_CFUNC const char*
-ulocimp_toLegacyType(const char* key, const char* type, UBool* isKnownKey, UBool* isSpecialType) {
-    if (isKnownKey != nullptr) {
-        *isKnownKey = false;
-    }
-    if (isSpecialType != nullptr) {
-        *isSpecialType = false;
-    }
-
+U_EXPORT const char*
+ulocimp_toLegacyType(const char* key, const char* type) {
     if (!init()) {
         return nullptr;
     }
 
-    LocExtKeyData* keyData = (LocExtKeyData*)uhash_get(gLocExtKeyMap, key);
+    LocExtKeyData* keyData = static_cast<LocExtKeyData*>(uhash_get(gLocExtKeyMap, key));
     if (keyData != nullptr) {
-        if (isKnownKey != nullptr) {
-            *isKnownKey = true;
-        }
-        LocExtType* t = (LocExtType*)uhash_get(keyData->typeMap.getAlias(), type);
+        LocExtType* t = static_cast<LocExtType*>(uhash_get(keyData->typeMap.getAlias(), type));
         if (t != nullptr) {
             return t->legacyId;
         }
         if (keyData->specialTypes != SPECIALTYPE_NONE) {
-            UBool matched = false;
+            bool matched = false;
             if (keyData->specialTypes & SPECIALTYPE_CODEPOINTS) {
                 matched = isSpecialTypeCodepoints(type);
             }
@@ -524,13 +504,9 @@ ulocimp_toLegacyType(const char* key, const char* type, UBool* isKnownKey, UBool
                 matched = isSpecialTypeRgKeyValue(type);
             }
             if (matched) {
-                if (isSpecialType != nullptr) {
-                    *isSpecialType = true;
-                }
                 return type;
             }
         }
     }
     return nullptr;
 }
-

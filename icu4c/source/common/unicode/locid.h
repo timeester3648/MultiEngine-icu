@@ -273,10 +273,10 @@ public:
      * @see uloc_getDefault
      * @stable ICU 2.0
      */
-    Locale( const   char * language,
-            const   char * country  = 0,
-            const   char * variant  = 0,
-            const   char * keywordsAndValues = 0);
+    Locale(const char* language,
+           const char* country = nullptr,
+           const char* variant = nullptr,
+           const char* keywordsAndValues = nullptr);
 
     /**
      * Initializes a Locale object from another Locale object.
@@ -1183,6 +1183,7 @@ Locale::operator!=(const    Locale&     other) const
 template<typename StringClass> inline StringClass
 Locale::toLanguageTag(UErrorCode& status) const
 {
+    if (U_FAILURE(status)) { return {}; }
     StringClass result;
     StringByteSink<StringClass> sink(&result);
     toLanguageTag(sink, status);
@@ -1210,7 +1211,7 @@ Locale::getScript() const
 inline const char *
 Locale::getVariant() const
 {
-    return &baseName[variantBegin];
+    return fIsBogus ? "" : &baseName[variantBegin];
 }
 
 inline const char *
@@ -1222,6 +1223,7 @@ Locale::getName() const
 template<typename StringClass, typename OutputIterator> inline void
 Locale::getKeywords(OutputIterator iterator, UErrorCode& status) const
 {
+    if (U_FAILURE(status)) { return; }
     LocalPointer<StringEnumeration> keys(createKeywords(status));
     if (U_FAILURE(status) || keys.isNull()) {
         return;
@@ -1239,6 +1241,7 @@ Locale::getKeywords(OutputIterator iterator, UErrorCode& status) const
 template<typename StringClass, typename OutputIterator> inline void
 Locale::getUnicodeKeywords(OutputIterator iterator, UErrorCode& status) const
 {
+    if (U_FAILURE(status)) { return; }
     LocalPointer<StringEnumeration> keys(createUnicodeKeywords(status));
     if (U_FAILURE(status) || keys.isNull()) {
         return;
@@ -1256,6 +1259,7 @@ Locale::getUnicodeKeywords(OutputIterator iterator, UErrorCode& status) const
 template<typename StringClass> inline StringClass
 Locale::getKeywordValue(StringPiece keywordName, UErrorCode& status) const
 {
+    if (U_FAILURE(status)) { return {}; }
     StringClass result;
     StringByteSink<StringClass> sink(&result);
     getKeywordValue(keywordName, sink, status);
@@ -1265,6 +1269,7 @@ Locale::getKeywordValue(StringPiece keywordName, UErrorCode& status) const
 template<typename StringClass> inline StringClass
 Locale::getUnicodeKeywordValue(StringPiece keywordName, UErrorCode& status) const
 {
+    if (U_FAILURE(status)) { return {}; }
     StringClass result;
     StringByteSink<StringClass> sink(&result);
     getUnicodeKeywordValue(keywordName, sink, status);

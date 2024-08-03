@@ -11,11 +11,14 @@ package com.ibm.icu.impl;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.util.EnumSet;
 import java.util.Iterator;
 import java.util.MissingResourceException;
 
 import com.ibm.icu.lang.UCharacter;
 import com.ibm.icu.lang.UCharacter.HangulSyllableType;
+import com.ibm.icu.lang.UCharacter.IdentifierStatus;
+import com.ibm.icu.lang.UCharacter.IdentifierType;
 import com.ibm.icu.lang.UCharacter.NumericType;
 import com.ibm.icu.lang.UCharacterCategory;
 import com.ibm.icu.lang.UProperty;
@@ -111,8 +114,10 @@ public final class UCharacterProperty
     public static final int SRC_EMOJI=15;
     public static final int SRC_IDSU=16;
     public static final int SRC_ID_COMPAT_MATH=17;
+    public static final int SRC_BLOCK=18;
+    public static final int SRC_MCM=19;
     /** One more than the highest UPropertySource (SRC_) constant. */
-    public static final int SRC_COUNT=18;
+    public static final int SRC_COUNT=20;
 
     private static final class LayoutProps {
         private static final class IsAcceptable implements ICUBinary.Authenticate {
@@ -291,10 +296,8 @@ public final class UCharacterProperty
      */
     public VersionInfo getAge(int codepoint)
     {
-        int version = getAdditional(codepoint, 0) >> AGE_SHIFT_;
-        return VersionInfo.getInstance(
-                           (version >> FIRST_NIBBLE_SHIFT_) & LAST_NIBBLE_MASK_,
-                           version & LAST_NIBBLE_MASK_, 0, 0);
+        int version = getAdditional(codepoint, 0) >>> AGE_SHIFT_;
+        return VersionInfo.getInstance(version >> 2, version & 3, 0, 0);
     }
 
     private static final int GC_CN_MASK = getMask(UCharacter.UNASSIGNED);
@@ -405,6 +408,19 @@ public final class UCharacterProperty
         0x1D7C3
     };
 
+    /** Ranges (start/limit pairs) of Modifier_Combining_mark (only), from UCD PropList.txt. */
+    private static final int[] MODIFIER_COMBINING_MARK = {
+        0x0654, 0x0655 + 1,
+        0x0658, 0x0658 + 1, // U+0658
+        0x06DC, 0x06DC + 1, // U+06DC
+        0x06E3, 0x06E3 + 1, // U+06E3
+        0x06E7, 0x06E8 + 1,
+        0x08CA, 0x08CB + 1,
+        0x08CD, 0x08CF + 1,
+        0x08D3, 0x08D3 + 1, // U+08D3
+        0x08F3, 0x08F3 + 1  // U+08F3
+};
+
     private class MathCompatBinaryProperty extends BinaryProperty {
         int which;
         MathCompatBinaryProperty(int which) {
@@ -422,6 +438,20 @@ public final class UCharacterProperty
             if (c < ID_COMPAT_MATH_START[0]) { return false; }  // fastpath for common scripts
             for (int startChar : ID_COMPAT_MATH_START) {
                 if (c == startChar) { return true; }
+            }
+            return false;
+        }
+    }
+
+    private class MCMBinaryProperty extends BinaryProperty {
+        MCMBinaryProperty() {
+            super(SRC_MCM);
+        }
+        @Override
+        boolean contains(int c) {
+            for (int i = 0; i < MODIFIER_COMBINING_MARK.length; i += 2) {
+                if (c < MODIFIER_COMBINING_MARK[i]) { return false; }  // below range start
+                if (c < MODIFIER_COMBINING_MARK[i + 1]) { return true; }  // below range limit
             }
             return false;
         }
@@ -627,6 +657,7 @@ public final class UCharacterProperty
         },
         new MathCompatBinaryProperty(UProperty.ID_COMPAT_MATH_START),
         new MathCompatBinaryProperty(UProperty.ID_COMPAT_MATH_CONTINUE),
+        new MCMBinaryProperty(),
     };
 
     public boolean hasBinaryProperty(int c, int which) {
@@ -646,7 +677,11 @@ public final class UCharacterProperty
 
     /*
      * Map some of the Grapheme Cluster Break values to Hangul Syllable Types.
-     * Hangul_Syllable_Type is fully redundant with a subset of Grapheme_Cluster_Break.
+     * Hangul_Syllable_Type is redundant with a subset of Grapheme_Cluster_Break.
+     *
+     * Starting with Unicode 16, there is an exception:
+     * Some Kirat Rai vowels are given GCB=V for proper grapheme clustering, but
+     * they are of course not related to Hangul syllables.
      */
     private static final int /* UHangulSyllableType */ gcbToHst[]={
         HangulSyllableType.NOT_APPLICABLE,   /* U_GCB_OTHER */
@@ -735,7 +770,24 @@ public final class UCharacterProperty
                 return UBiDiProps.INSTANCE.getClass(c);
             }
         },
-        new IntProperty(0, BLOCK_MASK_, BLOCK_SHIFT_),
+        new IntProperty(SRC_BLOCK) {  // BLOCK
+            @Override
+            int getValue(int c) {
+                // We store Block values indexed by the code point shifted right 4 bits
+                // and use a "small" UCPTrie=CodePointTrie for minimal data size.
+                // This works because blocks have xxx0..xxxF ranges.
+                int c4 = c;
+                // Shift unless out of range, in which case we fetch the trie's error value.
+                if (c4 <= 0x10ffff) {
+                    c4 >>= 4;
+                }
+                return m_blockTrie_.get(c4);
+            }
+            @Override
+            int getMaxValue(int which) {
+                return m_maxValuesOther_ & MAX_BLOCK;
+            }
+        },
         new CombiningClassIntProperty(SRC_NFC) {  // CANONICAL_COMBINING_CLASS
             @Override
             int getValue(int c) {
@@ -784,13 +836,18 @@ public final class UCharacterProperty
             }
             @Override
             int getMaxValue(int which) {
-                int scriptX=getMaxValues(0)&SCRIPT_X_MASK;
-                return mergeScriptCodeOrIndex(scriptX);
+                return getMaxValues(0)&MAX_SCRIPT;
             }
         },
         new IntProperty(SRC_PROPSVEC) {  // HANGUL_SYLLABLE_TYPE
             @Override
             int getValue(int c) {
+                // Ignore supplementary code points: They all have HST=NA.
+                // This is a simple way to handle the GCB!=hst cases since Unicode 16
+                // (Kirat Rai vowels).
+                if(c>0xffff) {
+                    return HangulSyllableType.NOT_APPLICABLE;
+                }
                 /* see comments on gcbToHst[] above */
                 int gcb=(getAdditional(c, 2)&GCB_MASK)>>>GCB_SHIFT;
                 if(gcb<gcbToHst.length) {
@@ -864,6 +921,19 @@ public final class UCharacterProperty
                 return LayoutProps.INSTANCE.maxVoValue;
             }
         },
+        new IntProperty(SRC_PROPSVEC) {  // IDENTIFIER_STATUS
+            @Override
+            int getValue(int c) {
+                int value = getAdditional(c, 2) >>> ID_TYPE_SHIFT;
+                return value >= ID_TYPE_ALLOWED_MIN ?
+                        IdentifierStatus.ALLOWED.ordinal() : IdentifierStatus.RESTRICTED.ordinal();
+            }
+            @Override
+            int getMaxValue(int which) {
+                return IdentifierStatus.ALLOWED.ordinal();
+            }
+        },
+        new IntProperty(0, INCB_MASK, INCB_SHIFT),  // INDIC_CONJUNCT_BREAK
     };
 
     public int getIntPropertyValue(int c, int which) {
@@ -937,6 +1007,7 @@ public final class UCharacterProperty
         } else {
             switch(which) {
             case UProperty.SCRIPT_EXTENSIONS:
+            case UProperty.IDENTIFIER_TYPE:
                 return SRC_PROPSVEC;
             default:
                 return SRC_NONE; /* undefined */
@@ -1259,12 +1330,16 @@ public final class UCharacterProperty
      * Maximum values for script, bits used as in vector word
      * 0
      */
-     int m_maxJTGValue_;
+    int m_maxJTGValue_;
+    /** maximum values for other code values */
+    int m_maxValuesOther_;
 
     /**
      * Script_Extensions data
      */
     public char[] m_scriptExtensions_;
+
+    CodePointTrie m_blockTrie_;
 
     // private variables -------------------------------------------------
 
@@ -1329,70 +1404,34 @@ public final class UCharacterProperty
             NumericType.NUMERIC;
     }
 
-    /*
-     * Properties in vector word 0
-     * Bits
-     * 31..24   DerivedAge version major/minor one nibble each
-     * 23..22   3..1: Bits 21..20 & 7..0 = Script_Extensions index
-     *             3: Script value from Script_Extensions
-     *             2: Script=Inherited
-     *             1: Script=Common
-     *             0: Script=bits 21..20 & 7..0
-     * 21..20   Bits 9..8 of the UScriptCode, or index to Script_Extensions
-     * 19..17   East Asian Width
-     * 16.. 8   UBlockCode
-     *  7.. 0   UScriptCode, or index to Script_Extensions
-     */
+    // Properties in vector word 0
+    // Bits
+    // 31..26   Age major version (major=0..63)
+    // 25..24   Age minor version (minor=0..3)
+    // 23..17   reserved
+    // 16..15   Indic Conjunct Break
+    // 14..12   East Asian Width
+    // 11..10   3..1: Bits 9..0 = Script_Extensions index
+    //             3: Script value from Script_Extensions
+    //             2: Script=Inherited
+    //             1: Script=Common
+    //             0: Script=bits 9..0
+    //  9.. 0   UScriptCode, or index to Script_Extensions
 
-    /**
-     * Script_Extensions: mask includes Script
-     */
-    public static final int SCRIPT_X_MASK = 0x00f000ff;
-    //private static final int SCRIPT_X_SHIFT = 22;
+    private static final int EAST_ASIAN_MASK_ = 0x00007000;
+    private static final int EAST_ASIAN_SHIFT_ = 12;
 
-    // The UScriptCode or Script_Extensions index is split across two bit fields.
-    // (Starting with Unicode 13/ICU 66/2019 due to more varied Script_Extensions.)
-    // Shift the high bits right by 12 to assemble the full value.
-    public static final int SCRIPT_HIGH_MASK = 0x00300000;
-    public static final int SCRIPT_HIGH_SHIFT = 12;
+    private static final int INCB_MASK = 0x00018000;
+    private static final int INCB_SHIFT = 15;
+
+    /** Script_Extensions: mask includes Script */
+    public static final int SCRIPT_X_MASK = 0x00000fff;
+
+    // SCRIPT_X_WITH_COMMON must be the lowest value that involves Script_Extensions.
+    public static final int SCRIPT_X_WITH_OTHER = 0xc00;
+    public static final int SCRIPT_X_WITH_INHERITED = 0x800;
+    public static final int SCRIPT_X_WITH_COMMON = 0x400;
     public static final int MAX_SCRIPT = 0x3ff;
-
-    /**
-     * Integer properties mask and shift values for East Asian cell width.
-     * Equivalent to icu4c UPROPS_EA_MASK
-     */
-    private static final int EAST_ASIAN_MASK_ = 0x000e0000;
-    /**
-     * Integer properties mask and shift values for East Asian cell width.
-     * Equivalent to icu4c UPROPS_EA_SHIFT
-     */
-    private static final int EAST_ASIAN_SHIFT_ = 17;
-    /**
-     * Integer properties mask and shift values for blocks.
-     * Equivalent to icu4c UPROPS_BLOCK_MASK
-     */
-    private static final int BLOCK_MASK_ = 0x0001ff00;
-    /**
-     * Integer properties mask and shift values for blocks.
-     * Equivalent to icu4c UPROPS_BLOCK_SHIFT
-     */
-    private static final int BLOCK_SHIFT_ = 8;
-    /**
-     * Integer properties mask and shift values for scripts.
-     * Equivalent to icu4c UPROPS_SHIFT_LOW_MASK.
-     */
-    public static final int SCRIPT_LOW_MASK = 0x000000ff;
-
-    /* SCRIPT_X_WITH_COMMON must be the lowest value that involves Script_Extensions. */
-    public static final int SCRIPT_X_WITH_COMMON = 0x400000;
-    public static final int SCRIPT_X_WITH_INHERITED = 0x800000;
-    public static final int SCRIPT_X_WITH_OTHER = 0xc00000;
-
-    public static final int mergeScriptCodeOrIndex(int scriptX) {
-        return
-            ((scriptX & SCRIPT_HIGH_MASK) >> SCRIPT_HIGH_SHIFT) |
-            (scriptX & SCRIPT_LOW_MASK);
-    }
 
     /**
      * Additional properties used in internal trie data
@@ -1444,20 +1483,73 @@ public final class UCharacterProperty
     /*
      * Properties in vector word 2
      * Bits
-     * 31..26   unused since ICU 70 added uemoji.icu;
-     *          in ICU 57..69 stored emoji properties
+     * 31..26   ICU 75: Identifier_Type bit set
+     *          ICU 70..74: unused
+     *          ICU 57..69: emoji properties; moved to uemoji.icu in ICU 70
      * 25..20   Line Break
      * 19..15   Sentence Break
      * 14..10   Word Break
      *  9.. 5   Grapheme Cluster Break
      *  4.. 0   Decomposition Type
      */
-    //ivate static final int PROPS_2_EXTENDED_PICTOGRAPHIC=26;  // ICU 62..69
-    //ivate static final int PROPS_2_EMOJI_COMPONENT = 27;  // ICU 60..69
-    //ivate static final int PROPS_2_EMOJI = 28;  // ICU 57..69
-    //ivate static final int PROPS_2_EMOJI_PRESENTATION = 29;  // ICU 57..69
-    //ivate static final int PROPS_2_EMOJI_MODIFIER = 30;  // ICU 57..69
-    //ivate static final int PROPS_2_EMOJI_MODIFIER_BASE = 31;  // ICU 57..69
+
+    // https://www.unicode.org/reports/tr39/#Identifier_Status_and_Type
+    // The Identifier_Type maps each code point to a *set* of one or more values.
+    // Some can be combined with others, some can only occur alone.
+    // Exclusion & Limited_Use are combinable bits, but cannot occur together.
+    // We use this forbidden combination for enumerated values.
+    // We use 6 bits for all possible combinations.
+    // If more combinable values are added, then we need to use more bits.
+    //
+    // We do not store separate data for Identifier_Status:
+    // We can derive that from the encoded Identifier_Type via a simple range check.
+
+    // vate static final int ID_TYPE_MASK = 0xfc000000;
+    private static final int ID_TYPE_SHIFT = 26;
+
+    // A high bit for use in idTypeToEncoded[] but not used in the data
+    private static final int ID_TYPE_BIT = 0x80;
+
+    // Combinable bits
+    private static final int ID_TYPE_EXCLUSION = 0x20;
+    private static final int ID_TYPE_LIMITED_USE = 0x10;
+    private static final int ID_TYPE_UNCOMMON_USE = 8;
+    private static final int ID_TYPE_TECHNICAL = 4;
+    private static final int ID_TYPE_OBSOLETE = 2;
+    private static final int ID_TYPE_NOT_XID = 1;
+
+    // Exclusive values
+    private static final int ID_TYPE_NOT_CHARACTER = 0;
+
+    // Forbidden bit combination used for enumerating other exclusive values
+    private static final int ID_TYPE_FORBIDDEN = ID_TYPE_EXCLUSION | ID_TYPE_LIMITED_USE; // 0x30
+    private static final int ID_TYPE_DEPRECATED = ID_TYPE_FORBIDDEN; // 0x30
+    private static final int ID_TYPE_DEFAULT_IGNORABLE = ID_TYPE_FORBIDDEN + 1; // 0x31
+    private static final int ID_TYPE_NOT_NFKC = ID_TYPE_FORBIDDEN + 2; // 0x32
+
+    private static final int ID_TYPE_ALLOWED_MIN = ID_TYPE_FORBIDDEN + 0xc; // 0x3c
+    private static final int ID_TYPE_INCLUSION = ID_TYPE_FORBIDDEN + 0xe; // 0x3e
+    private static final int ID_TYPE_RECOMMENDED = ID_TYPE_FORBIDDEN + 0xf; // 0x3f
+
+    /**
+     * Maps UIdentifierType to encoded bits.
+     * When UPROPS_ID_TYPE_BIT is set, then use "&" to test whether the value bit is set.
+     * When UPROPS_ID_TYPE_BIT is not set, then compare ("==") the array value with the data value.
+     */
+    private static final int[] idTypeToEncoded = {
+        ID_TYPE_NOT_CHARACTER,
+        ID_TYPE_DEPRECATED,
+        ID_TYPE_DEFAULT_IGNORABLE,
+        ID_TYPE_NOT_NFKC,
+        ID_TYPE_BIT | ID_TYPE_NOT_XID,
+        ID_TYPE_BIT | ID_TYPE_EXCLUSION,
+        ID_TYPE_BIT | ID_TYPE_OBSOLETE,
+        ID_TYPE_BIT | ID_TYPE_TECHNICAL,
+        ID_TYPE_BIT | ID_TYPE_UNCOMMON_USE,
+        ID_TYPE_BIT | ID_TYPE_LIMITED_USE,
+        ID_TYPE_INCLUSION,
+        ID_TYPE_RECOMMENDED
+    };
 
     private static final int LB_MASK          = 0x03f00000;
     private static final int LB_SHIFT         = 20;
@@ -1478,18 +1570,12 @@ public final class UCharacterProperty
     private static final int DECOMPOSITION_TYPE_MASK_ = 0x0000001f;
 
     /**
-     * First nibble shift
-     */
-    private static final int FIRST_NIBBLE_SHIFT_ = 0x4;
-    /**
-     * Second nibble mask
-     */
-    private static final int LAST_NIBBLE_MASK_ = 0xF;
-    /**
      * Age value shift
      */
     private static final int AGE_SHIFT_ = 24;
 
+    // Bits 9..0 in UPROPS_MAX_VALUES_OTHER_INDEX
+    private static final int MAX_BLOCK = 0x3ff;
 
     // private constructors --------------------------------------------------
 
@@ -1518,12 +1604,13 @@ public final class UCharacterProperty
         int additionalVectorsOffset = bytes.getInt();
         m_additionalColumnsCount_ = bytes.getInt();
         int scriptExtensionsOffset = bytes.getInt();
-        int reservedOffset7 = bytes.getInt();
-        /* reservedOffset8 = */ bytes.getInt();
+        int blockTrieOffset = bytes.getInt();
+        int reservedOffset8 = bytes.getInt();
         /* dataTopOffset = */ bytes.getInt();
         m_maxBlockScriptValue_ = bytes.getInt();
         m_maxJTGValue_ = bytes.getInt();
-        ICUBinary.skipBytes(bytes, (16 - 12) << 2);
+        m_maxValuesOther_ = bytes.getInt();
+        ICUBinary.skipBytes(bytes, (16 - 13) << 2);
 
         // read the main properties trie
         m_trie_ = Trie2_16.createFromSerialized(bytes);
@@ -1555,16 +1642,26 @@ public final class UCharacterProperty
         }
 
         // Script_Extensions
-        int numChars = (reservedOffset7 - scriptExtensionsOffset) * 2;
+        int numChars = (blockTrieOffset - scriptExtensionsOffset) * 2;
         if(numChars > 0) {
             m_scriptExtensions_ = ICUBinary.getChars(bytes, numChars, 0);
         }
+
+        // Read the blockTrie.
+        int partLength = (reservedOffset8 - blockTrieOffset) * 4;
+        int triePosition = bytes.position();
+        m_blockTrie_ = CodePointTrie.fromBinary(null, CodePointTrie.ValueWidth.BITS_16, bytes);
+        trieLength = bytes.position() - triePosition;
+        if (trieLength > partLength) {
+            throw new ICUUncheckedIOException("uprops.icu: not enough bytes for blockTrie");
+        }
+        ICUBinary.skipBytes(bytes, partLength - trieLength);  // skip padding after trie bytes
     }
 
     private static final class IsAcceptable implements ICUBinary.Authenticate {
         @Override
         public boolean isDataVersionAcceptable(byte version[]) {
-            return version[0] == 7;
+            return version[0] == 9;
         }
     }
     private static final int DATA_FORMAT = 0x5550726F;  // "UPro"
@@ -1732,6 +1829,81 @@ public final class UCharacterProperty
         for (int c : ID_COMPAT_MATH_START) {
             set.add(c);
             set.add(c + 1);
+        }
+    }
+
+    static void mcm_addPropertyStarts(UnicodeSet set) {
+        // range limits
+        for (int c : MODIFIER_COMBINING_MARK) {
+            set.add(c);
+        }
+    }
+
+    public void ublock_addPropertyStarts(UnicodeSet set) {
+        // Add the start code point of each same-value range of the trie.
+        // We store Block values indexed by the code point shifted right 4 bits;
+        // see ublock_getCode().
+        CodePointMap.Range range = new CodePointMap.Range();
+        int start = 0;
+        while (start < 0x11000 &&  // limit: (max code point + 1) >> 4
+                m_blockTrie_.getRange(start, null, range)) {
+            set.add(start << 4);
+            start = range.getEnd() + 1;
+        }
+    }
+
+    public boolean hasIDType(int c, int typeIndex) {
+        if (typeIndex < 0 || typeIndex >= idTypeToEncoded.length) {
+            return false;
+        }
+        int encodedType = idTypeToEncoded[typeIndex];
+        int value = getAdditional(c, 2) >>> ID_TYPE_SHIFT;
+        if ((encodedType & ID_TYPE_BIT) != 0) {
+            return value < ID_TYPE_FORBIDDEN && (value & encodedType) != 0;
+        } else {
+            return value == encodedType;
+        }
+    }
+
+    public boolean hasIDType(int c, IdentifierType type) {
+        return hasIDType(c, type.ordinal());
+    }
+
+    private static void maybeAddType(int value, int bit, IdentifierType t,
+            EnumSet<IdentifierType> types) {
+        if ((value & bit) != 0) {
+            types.add(t);
+        }
+    }
+
+    public int getIDTypes(int c, EnumSet<IdentifierType> types) {
+        types.clear();
+        int value = getAdditional(c, 2) >>> ID_TYPE_SHIFT;;
+        if ((value & ID_TYPE_FORBIDDEN) == ID_TYPE_FORBIDDEN || value == ID_TYPE_NOT_CHARACTER) {
+            // single value
+            IdentifierType t;
+            switch (value) {
+                case ID_TYPE_NOT_CHARACTER: t = IdentifierType.NOT_CHARACTER; break;
+                case ID_TYPE_DEPRECATED: t = IdentifierType.DEPRECATED; break;
+                case ID_TYPE_DEFAULT_IGNORABLE: t = IdentifierType.DEFAULT_IGNORABLE; break;
+                case ID_TYPE_NOT_NFKC: t = IdentifierType.NOT_NFKC; break;
+                case ID_TYPE_INCLUSION: t = IdentifierType.INCLUSION; break;
+                case ID_TYPE_RECOMMENDED: t = IdentifierType.RECOMMENDED; break;
+                default:
+                    throw new IllegalStateException(
+                            String.format("unknown IdentifierType data value 0x%02x", value));
+            }
+            types.add(t);
+            return 1;
+        } else {
+            // one or more combinable bits
+            maybeAddType(value, ID_TYPE_NOT_XID, IdentifierType.NOT_XID, types);
+            maybeAddType(value, ID_TYPE_EXCLUSION, IdentifierType.EXCLUSION, types);
+            maybeAddType(value, ID_TYPE_OBSOLETE, IdentifierType.OBSOLETE, types);
+            maybeAddType(value, ID_TYPE_TECHNICAL, IdentifierType.TECHNICAL, types);
+            maybeAddType(value, ID_TYPE_UNCOMMON_USE, IdentifierType.UNCOMMON_USE, types);
+            maybeAddType(value, ID_TYPE_LIMITED_USE, IdentifierType.LIMITED_USE, types);
+            return types.size();
         }
     }
 

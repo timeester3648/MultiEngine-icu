@@ -42,8 +42,8 @@ For example:
 
 *   `~/icu/mine/**src**`
     *   source tree including icu (ICU4C) & icu4j folders
-    *   setup: mkdir + git clone your fork (see the [Linux Tips
-        subpage](linux.md)) + cd to here.
+    *   setup: mkdir + git clone your fork (see the [Linux Tips subpage](linux.md)) + cd
+        to here.
     *   Use `git checkout <branch>` to switch between branches.
     *   Use `git checkout -b <newbranchname>` to create a new branch and switch
         to it.
@@ -70,11 +70,11 @@ For example:
         --disable-release Linux --prefix=/home/*your_user_name*/icu/mine/inst >
         config.out 2>&1`
     *   build: make -j5 check > out.txt 2>&1
-    *   Be sure to test with gcc and g++ too! `CC=gcc CXX=g++
-        CXXFLAGS="-DU_USING_ICU_NAMESPACE=0"
+    *   Be sure to test with both gcc/g++ and clang/clang++!
+        `CXXFLAGS="-DU_USING_ICU_NAMESPACE=0"
         CPPFLAGS="-DU_NO_DEFAULT_INCLUDE_UTF_HEADERS=1"
         ../../src/icu4c/source/runConfigureICU --enable-debug --disable-release
-        Linux`
+        Linux/clang`
 *   `~/icu/mine/icu4c/**nm_utf8**`
     *   not-using-namespace and default-hardcoded-UTF-8
     *   setup: mkdir+cd to here, then something like

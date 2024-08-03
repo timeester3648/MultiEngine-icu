@@ -33,11 +33,9 @@ U_NAMESPACE_BEGIN
 class StringEnumeration;
 class MeasureUnitImpl;
 
-namespace number {
-namespace impl {
+namespace number::impl {
 class LongNameHandler;
-}
-} // namespace number
+} // namespace number::impl
 
 /**
  * Enumeration for unit complexity. There are three levels:
@@ -3068,23 +3066,21 @@ class U_I18N_API MeasureUnit: public UObject {
      */
     static MeasureUnit getPoundPerSquareInch();
 
-#ifndef U_HIDE_DRAFT_API
     /**
      * Returns by pointer, unit of speed: beaufort.
      * Caller owns returned value and must free it.
      * Also see {@link #getBeaufort()}.
      * @param status ICU error code.
-     * @draft ICU 73
+     * @stable ICU 73
      */
     static MeasureUnit *createBeaufort(UErrorCode &status);
 
     /**
      * Returns by value, unit of speed: beaufort.
      * Also see {@link #createBeaufort()}.
-     * @draft ICU 73
+     * @stable ICU 73
      */
     static MeasureUnit getBeaufort();
-#endif /* U_HIDE_DRAFT_API */
 
     /**
      * Returns by pointer, unit of speed: kilometer-per-hour.

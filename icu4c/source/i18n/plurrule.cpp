@@ -22,7 +22,6 @@
 #include "unicode/numfmt.h"
 #include "unicode/decimfmt.h"
 #include "unicode/numberrangeformatter.h"
-#include "bytesinkutil.h"
 #include "charstr.h"
 #include "cmemory.h"
 #include "cstring.h"
@@ -861,9 +860,7 @@ PluralRules::getRuleFromResource(const Locale& locale, UPluralType type, UErrorC
 
         for (;;) {
             {
-                CharString tmp;
-                CharStringByteSink sink(&tmp);
-                ulocimp_getParent(parentLocaleName.data(), sink, &status);
+                CharString tmp = ulocimp_getParent(parentLocaleName.data(), status);
                 if (tmp.isEmpty()) break;
                 parentLocaleName = std::move(tmp);
             }
@@ -1602,7 +1599,7 @@ PluralKeywordEnumeration::PluralKeywordEnumeration(RuleChain *header, UErrorCode
 const UnicodeString*
 PluralKeywordEnumeration::snext(UErrorCode& status) {
     if (U_SUCCESS(status) && pos < fKeywordNames.size()) {
-        return (const UnicodeString*)fKeywordNames.elementAt(pos++);
+        return static_cast<const UnicodeString*>(fKeywordNames.elementAt(pos++));
     }
     return nullptr;
 }
@@ -1786,7 +1783,7 @@ void FixedDecimal::init(double n, int32_t v, int64_t f, int32_t e, int32_t c) {
         intValue = 0;
         _hasIntegerValue = false;
     } else {
-        intValue = (int64_t)source;
+        intValue = static_cast<int64_t>(source);
         _hasIntegerValue = (source == intValue);
     }
 
@@ -1870,17 +1867,17 @@ int64_t FixedDecimal::getFractionalDigits(double n, int32_t v) {
     n = fabs(n);
     double fract = n - floor(n);
     switch (v) {
-      case 1: return (int64_t)(fract*10.0 + 0.5);
-      case 2: return (int64_t)(fract*100.0 + 0.5);
-      case 3: return (int64_t)(fract*1000.0 + 0.5);
+      case 1: return static_cast<int64_t>(fract * 10.0 + 0.5);
+      case 2: return static_cast<int64_t>(fract * 100.0 + 0.5);
+      case 3: return static_cast<int64_t>(fract * 1000.0 + 0.5);
       default:
-          double scaled = floor(fract * pow(10.0, (double)v) + 0.5);
+          double scaled = floor(fract * pow(10.0, static_cast<double>(v)) + 0.5);
           if (scaled >= static_cast<double>(U_INT64_MAX)) {
               // Note: a double cannot accurately represent U_INT64_MAX. Casting it to double
               //       will round up to the next representable value, which is U_INT64_MAX + 1.
               return U_INT64_MAX;
           } else {
-              return (int64_t)scaled;
+              return static_cast<int64_t>(scaled);
           }
       }
 }
@@ -1905,7 +1902,7 @@ void FixedDecimal::adjustForMinFractionDigits(int32_t minFractionDigits) {
 double FixedDecimal::getPluralOperand(PluralOperand operand) const {
     switch(operand) {
         case PLURAL_OPERAND_N: return (exponent == 0 ? source : source * pow(10.0, exponent));
-        case PLURAL_OPERAND_I: return (double) longValue();
+        case PLURAL_OPERAND_I: return static_cast<double>(longValue());
         case PLURAL_OPERAND_F: return static_cast<double>(decimalDigits);
         case PLURAL_OPERAND_T: return static_cast<double>(decimalDigitsWithoutTrailingZeros);
         case PLURAL_OPERAND_V: return visibleDecimalDigitCount;
@@ -1962,7 +1959,7 @@ int64_t FixedDecimal::longValue() const {
     if (exponent == 0) {
         return intValue;
     } else {
-        return (long) (pow(10.0, exponent) * intValue);
+        return static_cast<long>(pow(10.0, exponent) * intValue);
     }
 }
 

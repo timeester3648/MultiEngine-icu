@@ -221,7 +221,6 @@ de{
         gmh{"Mittelhochdeutsch"}
         gn{"Guaraní"}
         goh{"Althochdeutsch"}
-        gom{"Goa-Konkani"}
         gon{"Gondi"}
         gor{"Mongondou"}
         got{"Gotisch"}
@@ -922,7 +921,6 @@ de{
             phonebook{"Telefonbuch-Sortierung"}
             phonetic{"Phonetische Sortierung"}
             pinyin{"Pinyin-Sortierung"}
-            reformed{"Reformierte Sortierreihenfolge"}
             search{"Allgemeine Suche"}
             searchjl{"Suche nach Anfangsbuchstaben des koreanischen Alphabets"}
             standard{"Standard-Sortierung"}

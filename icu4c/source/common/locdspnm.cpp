@@ -264,7 +264,7 @@ class LocaleDisplayNamesImpl : public LocaleDisplayNames {
     };
     // Capitalization transforms. For each usage type, indicates whether to titlecase for
     // the context specified in capitalizationContext (which we know at construction time)
-     UBool fCapitalization[kCapContextUsageCount];
+     bool fCapitalization[kCapContextUsageCount];
 
 public:
     // constructor
@@ -300,12 +300,12 @@ private:
                                 UnicodeString& result, bool substitute) const;
     UnicodeString& appendWithSep(UnicodeString& buffer, const UnicodeString& src) const;
     UnicodeString& adjustForUsageAndContext(CapContextUsage usage, UnicodeString& result) const;
-    UnicodeString& scriptDisplayName(const char* script, UnicodeString& result, UBool skipAdjust) const;
-    UnicodeString& regionDisplayName(const char* region, UnicodeString& result, UBool skipAdjust) const;
-    UnicodeString& variantDisplayName(const char* variant, UnicodeString& result, UBool skipAdjust) const;
-    UnicodeString& keyDisplayName(const char* key, UnicodeString& result, UBool skipAdjust) const;
+    UnicodeString& scriptDisplayName(const char* script, UnicodeString& result, bool skipAdjust) const;
+    UnicodeString& regionDisplayName(const char* region, UnicodeString& result, bool skipAdjust) const;
+    UnicodeString& variantDisplayName(const char* variant, UnicodeString& result, bool skipAdjust) const;
+    UnicodeString& keyDisplayName(const char* key, UnicodeString& result, bool skipAdjust) const;
     UnicodeString& keyValueDisplayName(const char* key, const char* value,
-                                        UnicodeString& result, UBool skipAdjust) const;
+                                        UnicodeString& result, bool skipAdjust) const;
     void initialize();
 
     struct CapitalizationContextSink;
@@ -336,10 +336,11 @@ LocaleDisplayNamesImpl::LocaleDisplayNamesImpl(const Locale& locale,
 {
     while (length-- > 0) {
         UDisplayContext value = *contexts++;
-        UDisplayContextType selector = (UDisplayContextType)((uint32_t)value >> 8);
+        UDisplayContextType selector =
+            static_cast<UDisplayContextType>(static_cast<uint32_t>(value) >> 8);
         switch (selector) {
             case UDISPCTX_TYPE_DIALECT_HANDLING:
-                dialectHandling = (UDialectHandling)value;
+                dialectHandling = static_cast<UDialectHandling>(value);
                 break;
             case UDISPCTX_TYPE_CAPITALIZATION:
                 capitalizationContext = value;
@@ -358,7 +359,7 @@ LocaleDisplayNamesImpl::LocaleDisplayNamesImpl(const Locale& locale,
 }
 
 struct LocaleDisplayNamesImpl::CapitalizationContextSink : public ResourceSink {
-    UBool hasCapitalizationUsage;
+    bool hasCapitalizationUsage;
     LocaleDisplayNamesImpl& parent;
 
     CapitalizationContextSink(LocaleDisplayNamesImpl& _parent)
@@ -407,7 +408,7 @@ LocaleDisplayNamesImpl::CapitalizationContextSink::~CapitalizationContextSink() 
 
 void
 LocaleDisplayNamesImpl::initialize() {
-    LocaleDisplayNamesImpl *nonConstThis = (LocaleDisplayNamesImpl *)this;
+    LocaleDisplayNamesImpl* nonConstThis = this;
     nonConstThis->locale = langData.getLocale() == Locale::getRoot()
         ? regionData.getLocale()
         : langData.getLocale();
@@ -426,16 +427,16 @@ LocaleDisplayNamesImpl::initialize() {
         pattern = UnicodeString("{0} ({1})", -1, US_INV);
     }
     format.applyPatternMinMaxArguments(pattern, 2, 2, status);
-    if (pattern.indexOf((char16_t)0xFF08) >= 0) {
-        formatOpenParen.setTo((char16_t)0xFF08);         // fullwidth (
-        formatReplaceOpenParen.setTo((char16_t)0xFF3B);  // fullwidth [
-        formatCloseParen.setTo((char16_t)0xFF09);        // fullwidth )
-        formatReplaceCloseParen.setTo((char16_t)0xFF3D); // fullwidth ]
+    if (pattern.indexOf(static_cast<char16_t>(0xFF08)) >= 0) {
+        formatOpenParen.setTo(static_cast<char16_t>(0xFF08));         // fullwidth (
+        formatReplaceOpenParen.setTo(static_cast<char16_t>(0xFF3B));  // fullwidth [
+        formatCloseParen.setTo(static_cast<char16_t>(0xFF09));        // fullwidth )
+        formatReplaceCloseParen.setTo(static_cast<char16_t>(0xFF3D)); // fullwidth ]
     } else {
-        formatOpenParen.setTo((char16_t)0x0028);         // (
-        formatReplaceOpenParen.setTo((char16_t)0x005B);  // [
-        formatCloseParen.setTo((char16_t)0x0029);        // )
-        formatReplaceCloseParen.setTo((char16_t)0x005D); // ]
+        formatOpenParen.setTo(static_cast<char16_t>(0x0028));         // (
+        formatReplaceOpenParen.setTo(static_cast<char16_t>(0x005B));  // [
+        formatCloseParen.setTo(static_cast<char16_t>(0x0029));        // )
+        formatReplaceCloseParen.setTo(static_cast<char16_t>(0x005D)); // ]
     }
 
     UnicodeString ktPattern;
@@ -449,7 +450,7 @@ LocaleDisplayNamesImpl::initialize() {
 #if !UCONFIG_NO_BREAK_ITERATION
     // Only get the context data if we need it! This is a const object so we know now...
     // Also check whether we will need a break iterator (depends on the data)
-    UBool needBrkIter = false;
+    bool needBrkIter = false;
     if (capitalizationContext == UDISPCTX_CAPITALIZATION_FOR_UI_LIST_OR_MENU || capitalizationContext == UDISPCTX_CAPITALIZATION_FOR_STANDALONE) {
         LocalUResourceBundlePointer resource(ures_open(nullptr, locale.getName(), &status));
         if (U_FAILURE(status)) { return; }
@@ -495,7 +496,7 @@ UDisplayContext
 LocaleDisplayNamesImpl::getContext(UDisplayContextType type) const {
     switch (type) {
         case UDISPCTX_TYPE_DIALECT_HANDLING:
-            return (UDisplayContext)dialectHandling;
+            return static_cast<UDisplayContext>(dialectHandling);
         case UDISPCTX_TYPE_CAPITALIZATION:
             return capitalizationContext;
         case UDISPCTX_TYPE_DISPLAY_LENGTH:
@@ -505,7 +506,7 @@ LocaleDisplayNamesImpl::getContext(UDisplayContextType type) const {
         default:
             break;
     }
-    return (UDisplayContext)0;
+    return static_cast<UDisplayContext>(0);
 }
 
 UnicodeString&
@@ -541,9 +542,9 @@ LocaleDisplayNamesImpl::localeDisplayName(const Locale& loc,
   const char* country = loc.getCountry();
   const char* variant = loc.getVariant();
 
-  UBool hasScript = uprv_strlen(script) > 0;
-  UBool hasCountry = uprv_strlen(country) > 0;
-  UBool hasVariant = uprv_strlen(variant) > 0;
+  bool hasScript = uprv_strlen(script) > 0;
+  bool hasCountry = uprv_strlen(country) > 0;
+  bool hasVariant = uprv_strlen(variant) > 0;
 
   if (dialectHandling == ULDN_DIALECT_NAMES) {
     UErrorCode status = U_ZERO_ERROR;
@@ -633,14 +634,10 @@ LocaleDisplayNamesImpl::localeDisplayName(const Locale& loc,
   if (e.isValid() && U_SUCCESS(status)) {
     UnicodeString temp2;
     const char* key;
-    while ((key = e->next((int32_t *)0, status)) != nullptr) {
-      CharString value;
-      {
-        CharStringByteSink sink(&value);
-        loc.getKeywordValue(key, sink, status);
-      }
-      if (U_FAILURE(status)) {
-        return result;
+    while ((key = e->next((int32_t*)nullptr, status)) != nullptr) {
+        auto value = loc.getKeywordValue<CharString>(key, status);
+        if (U_FAILURE(status)) {
+            return result;
       }
       keyDisplayName(key, temp, true);
       temp.findAndReplace(formatOpenParen, formatReplaceOpenParen);
@@ -656,7 +653,7 @@ LocaleDisplayNamesImpl::localeDisplayName(const Locale& loc,
         appendWithSep(resultRemainder, temp3);
       } else {
         appendWithSep(resultRemainder, temp)
-          .append((char16_t)0x3d /* = */)
+          .append(static_cast<char16_t>(0x3d) /* = */)
           .append(temp2);
       }
     }
@@ -755,7 +752,7 @@ LocaleDisplayNamesImpl::languageDisplayName(const char* lang,
 UnicodeString&
 LocaleDisplayNamesImpl::scriptDisplayName(const char* script,
                                           UnicodeString& result,
-                                          UBool skipAdjust) const {
+                                          bool skipAdjust) const {
     if (nameLength == UDISPCTX_LENGTH_SHORT) {
         langData.getNoFallback("Scripts%short", script, result);
         if (!result.isBogus()) {
@@ -785,7 +782,7 @@ LocaleDisplayNamesImpl::scriptDisplayName(UScriptCode scriptCode,
 UnicodeString&
 LocaleDisplayNamesImpl::regionDisplayName(const char* region,
                                           UnicodeString& result,
-                                          UBool skipAdjust) const {
+                                          bool skipAdjust) const {
     if (nameLength == UDISPCTX_LENGTH_SHORT) {
          regionData.getNoFallback("Countries%short", region, result);
         if (!result.isBogus()) {
@@ -810,7 +807,7 @@ LocaleDisplayNamesImpl::regionDisplayName(const char* region,
 UnicodeString&
 LocaleDisplayNamesImpl::variantDisplayName(const char* variant,
                                            UnicodeString& result,
-                                           UBool skipAdjust) const {
+                                           bool skipAdjust) const {
     // don't have a resource for short variant names
     if (substitute == UDISPCTX_SUBSTITUTE) {
         langData.get("Variants", variant, result);
@@ -829,7 +826,7 @@ LocaleDisplayNamesImpl::variantDisplayName(const char* variant,
 UnicodeString&
 LocaleDisplayNamesImpl::keyDisplayName(const char* key,
                                        UnicodeString& result,
-                                       UBool skipAdjust) const {
+                                       bool skipAdjust) const {
     // don't have a resource for short key names
     if (substitute == UDISPCTX_SUBSTITUTE) {
         langData.get("Keys", key, result);
@@ -849,7 +846,7 @@ UnicodeString&
 LocaleDisplayNamesImpl::keyValueDisplayName(const char* key,
                                             const char* value,
                                             UnicodeString& result,
-                                            UBool skipAdjust) const {
+                                            bool skipAdjust) const {
     if (uprv_strcmp(key, "currency") == 0) {
         // ICU4C does not have ICU4J CurrencyDisplayInfo equivalent for now.
         UErrorCode sts = U_ZERO_ERROR;
@@ -915,7 +912,7 @@ uldn_open(const char * locale,
           UDialectHandling dialectHandling,
           UErrorCode *pErrorCode) {
   if (U_FAILURE(*pErrorCode)) {
-    return 0;
+    return nullptr;
   }
   if (locale == nullptr) {
     locale = uloc_getDefault();
@@ -928,7 +925,7 @@ uldn_openForContext(const char * locale,
                     UDisplayContext *contexts, int32_t length,
                     UErrorCode *pErrorCode) {
   if (U_FAILURE(*pErrorCode)) {
-    return 0;
+    return nullptr;
   }
   if (locale == nullptr) {
     locale = uloc_getDefault();

@@ -160,17 +160,17 @@ static UBool U_CALLCONV timeZone_cleanup()
 
     LEN_SYSTEM_ZONES = 0;
     uprv_free(MAP_SYSTEM_ZONES);
-    MAP_SYSTEM_ZONES = 0;
+    MAP_SYSTEM_ZONES = nullptr;
     gSystemZonesInitOnce.reset();
 
     LEN_CANONICAL_SYSTEM_ZONES = 0;
     uprv_free(MAP_CANONICAL_SYSTEM_ZONES);
-    MAP_CANONICAL_SYSTEM_ZONES = 0;
+    MAP_CANONICAL_SYSTEM_ZONES = nullptr;
     gCanonicalZonesInitOnce.reset();
 
     LEN_CANONICAL_SYSTEM_LOCATION_ZONES = 0;
     uprv_free(MAP_CANONICAL_SYSTEM_LOCATION_ZONES);
-    MAP_CANONICAL_SYSTEM_LOCATION_ZONES = 0;
+    MAP_CANONICAL_SYSTEM_LOCATION_ZONES = nullptr;
     gCanonicalLocationZonesInitOnce.reset();
 
     return true;
@@ -195,7 +195,7 @@ static int32_t findInStringArray(UResourceBundle* array, const UnicodeString& id
     U_DEBUG_TZ_MSG(("fisa: Looking for %s, between %d and %d\n", U_DEBUG_TZ_STR(UnicodeString(id).getTerminatedBuffer()), start, limit));
 
     for (;;) {
-        mid = (int32_t)((start + limit) / 2);
+        mid = static_cast<int32_t>((start + limit) / 2);
         if (lastMid == mid) {   /* Have we moved? */
             break;  /* We haven't moved, and it wasn't found. */
         }
@@ -258,7 +258,7 @@ static UResourceBundle* getZoneByName(const UResourceBundle* top, const UnicodeS
 
 UResourceBundle* TimeZone::loadRule(const UResourceBundle* top, const UnicodeString& ruleid, UResourceBundle* oldbundle, UErrorCode& status) {
     char key[64];
-    ruleid.extract(0, sizeof(key)-1, key, (int32_t)sizeof(key)-1, US_INV);
+    ruleid.extract(0, sizeof(key) - 1, key, static_cast<int32_t>(sizeof(key)) - 1, US_INV);
     U_DEBUG_TZ_MSG(("loadRule(%s)\n", key));
     UResourceBundle *r = ures_getByKey(top, kRULES, oldbundle, &status);
     U_DEBUG_TZ_MSG(("loadRule(%s) -> kRULES [%s]\n", key, u_errorName(status)));
@@ -283,7 +283,7 @@ static UResourceBundle* openOlsonResource(const UnicodeString& id,
     char buf[128];
     id.extract(0, sizeof(buf)-1, buf, sizeof(buf), "");
 #endif
-    UResourceBundle *top = ures_openDirect(0, kZONEINFO, &ec);
+    UResourceBundle *top = ures_openDirect(nullptr, kZONEINFO, &ec);
     U_DEBUG_TZ_MSG(("pre: res sz=%d\n", ures_getSize(&res)));
     /* &res = */ getZoneByName(top, id, &res, ec);
     // Dereference if this is an alias.  Docs say result should be 1
@@ -392,7 +392,7 @@ createSystemTimeZone(const UnicodeString& id, UErrorCode& ec) {
     if (U_FAILURE(ec)) {
         return nullptr;
     }
-    TimeZone* z = 0;
+    TimeZone* z = nullptr;
     StackUResourceBundle res;
     U_DEBUG_TZ_MSG(("pre-err=%s\n", u_errorName(ec)));
     UResourceBundle *top = openOlsonResource(id, res.ref(), ec);
@@ -626,11 +626,11 @@ TimeZone::setDefault(const TimeZone& zone)
 static void U_CALLCONV initMap(USystemTimeZoneType type, UErrorCode& ec) {
     ucln_i18n_registerCleanup(UCLN_I18N_TIMEZONE, timeZone_cleanup);
 
-    UResourceBundle *res = ures_openDirect(0, kZONEINFO, &ec);
+    UResourceBundle *res = ures_openDirect(nullptr, kZONEINFO, &ec);
     res = ures_getByKey(res, kNAMES, res, &ec); // dereference Zones section
     if (U_SUCCESS(ec)) {
         int32_t size = ures_getSize(res);
-        int32_t *m = (int32_t *)uprv_malloc(size * sizeof(int32_t));
+        int32_t* m = static_cast<int32_t*>(uprv_malloc(size * sizeof(int32_t)));
         if (m == nullptr) {
             ec = U_MEMORY_ALLOCATION_ERROR;
         } else {
@@ -669,7 +669,7 @@ static void U_CALLCONV initMap(USystemTimeZoneType type, UErrorCode& ec) {
             }
             if (U_SUCCESS(ec)) {
                 int32_t *tmp = m;
-                m = (int32_t *)uprv_realloc(tmp, numEntries * sizeof(int32_t));
+                m = static_cast<int32_t*>(uprv_realloc(tmp, numEntries * sizeof(int32_t)));
                 if (m == nullptr) {
                     // realloc failed.. use the original one even it has unused
                     // area at the end
@@ -733,10 +733,16 @@ void TimeZone::getOffset(UDate date, UBool local, int32_t& rawOffset,
         int32_t year, month, dom, dow, millis;
         double day = ClockMath::floorDivide(date, U_MILLIS_PER_DAY, &millis);
 
-        Grego::dayToFields(day, year, month, dom, dow);
+        // out of the range
+        if (day < INT32_MIN || day > INT32_MAX) {
+            ec = U_ILLEGAL_ARGUMENT_ERROR;
+            return;
+        }
+        Grego::dayToFields(day, year, month, dom, dow, ec);
+        if (U_FAILURE(ec)) return;
 
         dstOffset = getOffset(GregorianCalendar::AD, year, month, dom,
-                              (uint8_t) dow, millis,
+                              static_cast<uint8_t>(dow), millis,
                               Grego::monthLength(year, month),
                               ec) - rawOffset;
 
@@ -774,7 +780,7 @@ private:
     UBool getID(int32_t i, UErrorCode& ec) {
         int32_t idLen = 0;
         const char16_t* id = nullptr;
-        UResourceBundle *top = ures_openDirect(0, kZONEINFO, &ec);
+        UResourceBundle *top = ures_openDirect(nullptr, kZONEINFO, &ec);
         top = ures_getByKey(top, kNAMES, top, &ec); // dereference Zones section
         id = ures_getStringByIndex(top, i, &idLen, &ec);
         if(U_FAILURE(ec)) {
@@ -843,14 +849,14 @@ public:
 
         if (region != nullptr || rawOffset != nullptr) {
             int32_t filteredMapSize = DEFAULT_FILTERED_MAP_SIZE;
-            filteredMap = (int32_t *)uprv_malloc(filteredMapSize * sizeof(int32_t));
+            filteredMap = static_cast<int32_t*>(uprv_malloc(filteredMapSize * sizeof(int32_t)));
             if (filteredMap == nullptr) {
                 ec = U_MEMORY_ALLOCATION_ERROR;
                 return nullptr;
             }
 
             // Walk through the base map
-            UResourceBundle *res = ures_openDirect(0, kZONEINFO, &ec);
+            UResourceBundle *res = ures_openDirect(nullptr, kZONEINFO, &ec);
             res = ures_getByKey(res, kNAMES, res, &ec); // dereference Zones section
             for (int32_t i = 0; i < baseLen; i++) {
                 int32_t zidx = baseMap[i];
@@ -887,7 +893,7 @@ public:
 
                 if (filteredMapSize <= numEntries) {
                     filteredMapSize += MAP_INCREMENT_SIZE;
-                    int32_t *tmp = (int32_t *)uprv_realloc(filteredMap, filteredMapSize * sizeof(int32_t));
+                    int32_t* tmp = static_cast<int32_t*>(uprv_realloc(filteredMap, filteredMapSize * sizeof(int32_t)));
                     if (tmp == nullptr) {
                         ec = U_MEMORY_ALLOCATION_ERROR;
                         break;
@@ -930,7 +936,7 @@ public:
 
     TZEnumeration(const TZEnumeration &other) : StringEnumeration(), map(nullptr), localMap(nullptr), len(0), pos(0) {
         if (other.localMap != nullptr) {
-            localMap = (int32_t *)uprv_malloc(other.len * sizeof(int32_t));
+            localMap = static_cast<int32_t*>(uprv_malloc(other.len * sizeof(int32_t)));
             if (localMap != nullptr) {
                 len = other.len;
                 uprv_memcpy(localMap, other.localMap, len * sizeof(int32_t));
@@ -965,7 +971,7 @@ public:
             ++pos;
             return &unistr;
         }
-        return 0;
+        return nullptr;
     }
 
     virtual void reset(UErrorCode& /*status*/) override {
@@ -1467,33 +1473,33 @@ TimeZone::formatCustomID(int32_t hour, int32_t min, int32_t sec,
     id.setTo(GMT_ID, GMT_ID_LENGTH);
     if (hour | min | sec) {
         if (negative) {
-            id += (char16_t)MINUS;
+            id += static_cast<char16_t>(MINUS);
         } else {
-            id += (char16_t)PLUS;
+            id += static_cast<char16_t>(PLUS);
         }
 
         if (hour < 10) {
-            id += (char16_t)ZERO_DIGIT;
+            id += static_cast<char16_t>(ZERO_DIGIT);
         } else {
-            id += (char16_t)(ZERO_DIGIT + hour/10);
+            id += static_cast<char16_t>(ZERO_DIGIT + hour / 10);
         }
-        id += (char16_t)(ZERO_DIGIT + hour%10);
-        id += (char16_t)COLON;
+        id += static_cast<char16_t>(ZERO_DIGIT + hour % 10);
+        id += static_cast<char16_t>(COLON);
         if (min < 10) {
-            id += (char16_t)ZERO_DIGIT;
+            id += static_cast<char16_t>(ZERO_DIGIT);
         } else {
-            id += (char16_t)(ZERO_DIGIT + min/10);
+            id += static_cast<char16_t>(ZERO_DIGIT + min / 10);
         }
-        id += (char16_t)(ZERO_DIGIT + min%10);
+        id += static_cast<char16_t>(ZERO_DIGIT + min % 10);
 
         if (sec) {
-            id += (char16_t)COLON;
+            id += static_cast<char16_t>(COLON);
             if (sec < 10) {
-                id += (char16_t)ZERO_DIGIT;
+                id += static_cast<char16_t>(ZERO_DIGIT);
             } else {
-                id += (char16_t)(ZERO_DIGIT + sec/10);
+                id += static_cast<char16_t>(ZERO_DIGIT + sec / 10);
             }
-            id += (char16_t)(ZERO_DIGIT + sec%10);
+            id += static_cast<char16_t>(ZERO_DIGIT + sec % 10);
         }
     }
     return id;
@@ -1515,7 +1521,7 @@ static void U_CALLCONV initTZDataVersion(UErrorCode &status) {
     const char16_t *tzver = ures_getStringByKey(bundle.getAlias(), kTZVERSION, &len, &status);
 
     if (U_SUCCESS(status)) {
-        if (len >= (int32_t)sizeof(TZDATA_VERSION)) {
+        if (len >= static_cast<int32_t>(sizeof(TZDATA_VERSION))) {
             // Ensure that there is always space for a trailing nul in TZDATA_VERSION
             len = sizeof(TZDATA_VERSION) - 1;
         }
@@ -1636,7 +1642,7 @@ TimeZone::getWindowsID(const UnicodeString& id, UnicodeString& winid, UErrorCode
             const char16_t *start = tzids;
             UBool hasNext = true;
             while (hasNext) {
-                const char16_t *end = u_strchr(start, (char16_t)0x20);
+                const char16_t* end = u_strchr(start, static_cast<char16_t>(0x20));
                 if (end == nullptr) {
                     end = tzids + len;
                     hasNext = false;
@@ -1677,7 +1683,7 @@ TimeZone::getIDForWindowsID(const UnicodeString& winid, const char* region, Unic
     char winidKey[MAX_WINDOWS_ID_SIZE];
     int32_t winKeyLen = winid.extract(0, winid.length(), winidKey, sizeof(winidKey) - 1, US_INV);
 
-    if (winKeyLen == 0 || winKeyLen >= (int32_t)sizeof(winidKey)) {
+    if (winKeyLen == 0 || winKeyLen >= static_cast<int32_t>(sizeof(winidKey))) {
         ures_close(zones);
         return id;
     }
@@ -1698,7 +1704,7 @@ TimeZone::getIDForWindowsID(const UnicodeString& winid, const char* region, Unic
                                                                                 // regional mapping is optional
         if (U_SUCCESS(tmperr)) {
             // first ID delimited by space is the default one
-            const char16_t *end = u_strchr(tzids, (char16_t)0x20);
+            const char16_t* end = u_strchr(tzids, static_cast<char16_t>(0x20));
             if (end == nullptr) {
                 id.setTo(tzids, -1);
             } else {

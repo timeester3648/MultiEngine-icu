@@ -219,7 +219,6 @@ gd{
         gmh{"Meadhan-Àrd-Gearmailtis"}
         gn{"Guaraní"}
         goh{"Seann-Àrd-Gearmailtis"}
-        gom{"Konkani Goa"}
         gon{"Gondi"}
         gor{"Gorontalo"}
         got{"Gotais"}
@@ -897,7 +896,6 @@ gd{
             gb2312han{"Òrdugh seòrsachaidh na Sìnise Simplichte - GB2312"}
             phonebook{"Òrdugh seòrsachaidh nan leabhraichean-fòn"}
             pinyin{"Òrdugh seòrsachaidh Pinyin"}
-            reformed{"Òrdugh seòrsachaidh ath-leasaichte"}
             search{"Lorg coitcheann"}
             searchjl{"Lorg leis a’ chiad chonnrag Hangul"}
             standard{"Òrdugh seòrsachaidh stannardach"}
