@@ -377,6 +377,10 @@ int main(int argc, char* argv[])
                     data.staticData.name);
             }
 
+            if (strlen(cnvName) + 1 > UPRV_LENGTHOF(data.staticData.name)) {
+                fprintf(stderr, "converter name %s too long\n", cnvName);
+                return U_BUFFER_OVERFLOW_ERROR;
+            }
             uprv_strcpy((char*)data.staticData.name, cnvName);
 
             if(!uprv_isInvariantString((char*)data.staticData.name, -1)) {
@@ -680,7 +684,7 @@ createConverter(ConvData *data, const char *converterName, UErrorCode *pErrorCod
 
         } else if(
             data->ucm->ext->mappingsLength>0 &&
-            !ucm_checkBaseExt(states, data->ucm->base, data->ucm->ext, data->ucm->ext, false)
+            !ucm_checkBaseExt(states, data->ucm->base, data->ucm->ext, data->ucm->ext, 0)
         ) {
             *pErrorCode=U_INVALID_TABLE_FORMAT;
         } else if(data->ucm->base->flagsType&UCM_FLAGS_EXPLICIT) {
@@ -800,7 +804,7 @@ createConverter(ConvData *data, const char *converterName, UErrorCode *pErrorCod
 
                 } else if(
                     !ucm_checkValidity(data->ucm->ext, baseStates) ||
-                    !ucm_checkBaseExt(baseStates, baseData.ucm->base, data->ucm->ext, data->ucm->ext, false)
+                    !ucm_checkBaseExt(baseStates, baseData.ucm->base, data->ucm->ext, data->ucm->ext, 0)
                 ) {
                     *pErrorCode=U_INVALID_TABLE_FORMAT;
                 } else {

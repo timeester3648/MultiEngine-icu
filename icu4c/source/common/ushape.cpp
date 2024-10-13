@@ -28,6 +28,7 @@
 #include "ubidi_props.h"
 #include "uassert.h"
 
+#include <limits>
 /*
  * This implementation is designed for 16-bit Unicode strings.
  * The main assumption is that the Arabic characters and their
@@ -747,6 +748,10 @@ handleGeneratedSpaces(char16_t *dest, int32_t sourceLength,
         }
     }
 
+    if (static_cast<size_t>(sourceLength) + 1 > std::numeric_limits<size_t>::max() / U_SIZEOF_UCHAR) {
+        *pErrorCode = U_INDEX_OUTOFBOUNDS_ERROR;
+        return 0;
+    }
     tempbuffer = static_cast<char16_t*>(uprv_malloc((sourceLength + 1) * U_SIZEOF_UCHAR));
     /* Test for nullptr */
     if(tempbuffer == nullptr) {
@@ -1709,13 +1714,13 @@ u_shapeArabic(const char16_t *source, int32_t sourceLength,
         case U_SHAPE_DIGITS_ALEN2AN_INIT_LR:
             _shapeToArabicDigitsWithContext(dest, destLength,
                                             digitBase,
-                                            (UBool)((options&U_SHAPE_TEXT_DIRECTION_MASK)==U_SHAPE_TEXT_DIRECTION_LOGICAL),
+                                            (options & U_SHAPE_TEXT_DIRECTION_MASK) == U_SHAPE_TEXT_DIRECTION_LOGICAL,
                                             false);
             break;
         case U_SHAPE_DIGITS_ALEN2AN_INIT_AL:
             _shapeToArabicDigitsWithContext(dest, destLength,
                                             digitBase,
-                                            (UBool)((options&U_SHAPE_TEXT_DIRECTION_MASK)==U_SHAPE_TEXT_DIRECTION_LOGICAL),
+                                            (options & U_SHAPE_TEXT_DIRECTION_MASK) == U_SHAPE_TEXT_DIRECTION_LOGICAL,
                                             true);
             break;
         default:

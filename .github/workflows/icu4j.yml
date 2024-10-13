@@ -12,11 +12,13 @@ on:
       - 'maint/maint*'
     paths:
       - 'icu4j/**'
+      - 'testdata/**'
       - '.github/workflows/**'
   pull_request:
     branches: '**'
     paths:
       - 'icu4j/**'
+      - 'testdata/**'
       - '.github/workflows/**'
   workflow_dispatch:
     # To trigger the Env Test workflow manually, follow the instructions in
@@ -65,7 +67,7 @@ jobs:
         run: |
           cd icu4j;
           mvn ${SHARED_MVN_ARGS} dependency:go-offline -P '!old_jdk_taglet'
-          
+
   # ICU4J build and unit test using Maven
   # https://docs.github.com/en/actions/automating-builds-and-tests/building-and-testing-java-with-maven
   icu4j-mvn-build-and-test:
@@ -73,7 +75,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        java-version: [ '8', '11', '17' ]
+        java-version: [ '8', '11', '17', '21' ]
     runs-on: ubuntu-latest
     steps:
       - name: Checkout and setup

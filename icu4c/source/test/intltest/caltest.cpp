@@ -206,6 +206,7 @@ void CalendarTest::runIndexedTest( int32_t index, UBool exec, const char* &name,
 
     TESTCASE_AUTO(Test22633HebrewLargeNegativeDay);
     TESTCASE_AUTO(Test22730JapaneseOverflow);
+    TESTCASE_AUTO(Test22730CopticOverflow);
 
     TESTCASE_AUTO(TestAddOverflow);
 
@@ -3917,7 +3918,7 @@ void CalendarTest::TestClearMonth() {
     if (failure(status, "Calendar::get(UCAL_MONTH)")) return;
     cal->clear(UCAL_MONTH);
     assertEquals("Calendar::isSet(UCAL_MONTH) after clear(UCAL_MONTH)", false, !!cal->isSet(UCAL_MONTH));
-    assertEquals("Calendar::get(UCAL_MONTH after clear(UCAL_MONTH))", UCAL_JANUARY, !!cal->get(UCAL_MONTH, status));
+    assertEquals("Calendar::get(UCAL_MONTH after clear(UCAL_MONTH))", UCAL_JANUARY, cal->get(UCAL_MONTH, status));
     if (failure(status, "Calendar::get(UCAL_MONTH)")) return;
 
     cal->set(UCAL_ORDINAL_MONTH, 7);
@@ -5604,7 +5605,7 @@ void CalendarTest::TestFirstDayOfWeek() {
 
     // Test -u-rg- value
     verifyFirstDayOfWeek("en-MV-u-ca-iso8601-rg-mvzzzz-sd-usca", UCAL_FRIDAY);
-    verifyFirstDayOfWeek("en-MV-u-ca-iso8601-rg-aezzzz-sd-usca", UCAL_SATURDAY);
+    verifyFirstDayOfWeek("en-MV-u-ca-iso8601-rg-aezzzz-sd-usca", UCAL_MONDAY);
     verifyFirstDayOfWeek("en-MV-u-ca-iso8601-rg-uszzzz-sd-usca", UCAL_SUNDAY);
     verifyFirstDayOfWeek("en-MV-u-ca-iso8601-rg-gbzzzz-sd-usca", UCAL_MONDAY);
 
@@ -5615,13 +5616,13 @@ void CalendarTest::TestFirstDayOfWeek() {
 
     // Test Region Tags only
     verifyFirstDayOfWeek("en-MV", UCAL_FRIDAY);
-    verifyFirstDayOfWeek("en-AE", UCAL_SATURDAY);
+    verifyFirstDayOfWeek("en-AE", UCAL_MONDAY);
     verifyFirstDayOfWeek("en-US", UCAL_SUNDAY);
     verifyFirstDayOfWeek("dv-GB", UCAL_MONDAY);
 
     // Test -u-sd-
     verifyFirstDayOfWeek("en-u-sd-mv00", UCAL_FRIDAY);
-    verifyFirstDayOfWeek("en-u-sd-aeaj", UCAL_SATURDAY);
+    verifyFirstDayOfWeek("en-u-sd-aeaj", UCAL_MONDAY);
     verifyFirstDayOfWeek("en-u-sd-usca", UCAL_SUNDAY);
     verifyFirstDayOfWeek("dv-u-sd-gbsct", UCAL_MONDAY);
 
@@ -5632,10 +5633,8 @@ void CalendarTest::TestFirstDayOfWeek() {
     verifyFirstDayOfWeek("und-Thaa", UCAL_FRIDAY);
 
     // ssh => ssh_Arab_AE => Saturday
-    verifyFirstDayOfWeek("ssh", UCAL_SATURDAY);
-    // wbl_Arab => wbl_Arab_AF => Saturday
-    verifyFirstDayOfWeek("wbl-Arab", UCAL_SATURDAY);
-
+    verifyFirstDayOfWeek("ssh", UCAL_MONDAY);  
+    
     // en => en_Latn_US => Sunday
     verifyFirstDayOfWeek("en", UCAL_SUNDAY);
     // und_Hira => ja_Hira_JP => Sunday
@@ -5885,6 +5884,17 @@ void CalendarTest::Test22730JapaneseOverflow() {
         status);
     calendar->clear();
     calendar->roll(UCAL_EXTENDED_YEAR, -1946156856, status);
+    assertEquals("status return without overflow", status, U_ILLEGAL_ARGUMENT_ERROR);
+}
+
+void CalendarTest::Test22730CopticOverflow() {
+    UErrorCode status = U_ZERO_ERROR;
+    LocalPointer<Calendar> calendar(
+        Calendar::createInstance(Locale("tn-BW-u-ca-coptic"), status),
+        status);
+    calendar->clear();
+    calendar->set(UCAL_JULIAN_DAY, -2147456654);
+    calendar->roll(UCAL_ORDINAL_MONTH, 6910543, status);
     assertEquals("status return without overflow", status, U_ILLEGAL_ARGUMENT_ERROR);
 }
 

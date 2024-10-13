@@ -828,9 +828,9 @@ Calendar::operator=(const Calendar &right)
         fWeekendCease            = right.fWeekendCease;
         fWeekendCeaseMillis      = right.fWeekendCeaseMillis;
         fNextStamp               = right.fNextStamp;
-        uprv_strncpy(validLocale, right.validLocale, sizeof(validLocale));
-        uprv_strncpy(actualLocale, right.actualLocale, sizeof(actualLocale));
+        uprv_strncpy(validLocale, right.validLocale, sizeof(validLocale)-1);
         validLocale[sizeof(validLocale)-1] = 0;
+        uprv_strncpy(actualLocale, right.actualLocale, sizeof(actualLocale)-1);
         actualLocale[sizeof(validLocale)-1] = 0;
     }
 
@@ -2849,7 +2849,7 @@ Calendar::inDaylightTime(UErrorCode& status) const
     // Force an update of the state of the Calendar.
     const_cast<Calendar*>(this)->complete(status); // cast away const
 
-    return static_cast<UBool>(U_SUCCESS(status) ? internalGet(UCAL_DST_OFFSET) != 0 : false);
+    return U_SUCCESS(status) ? internalGet(UCAL_DST_OFFSET) != 0 : false;
 }
 
 bool

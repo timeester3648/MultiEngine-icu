@@ -47,14 +47,17 @@
 
 U_NAMESPACE_USE
 
+namespace {
+
 // Special property set IDs
-static const char ANY[]   = "ANY";   // [\u0000-\U0010FFFF]
-static const char ASCII[] = "ASCII"; // [\u0000-\u007F]
-static const char ASSIGNED[] = "Assigned"; // [:^Cn:]
+constexpr char ANY[]   = "ANY";   // [\u0000-\U0010FFFF]
+constexpr char ASCII[] = "ASCII"; // [\u0000-\u007F]
+constexpr char ASSIGNED[] = "Assigned"; // [:^Cn:]
 
 // Unicode name property alias
-#define NAME_PROP "na"
-#define NAME_PROP_LENGTH 2
+constexpr char16_t NAME_PROP[] = u"na";
+
+}  // namespace
 
 // Cached sets ------------------------------------------------------------- ***
 
@@ -83,7 +86,7 @@ namespace {
 // Cache some sets for other services -------------------------------------- ***
 void U_CALLCONV createUni32Set(UErrorCode &errorCode) {
     U_ASSERT(uni32Singleton == nullptr);
-    uni32Singleton = new UnicodeSet(UNICODE_STRING_SIMPLE("[:age=3.2:]"), errorCode);
+    uni32Singleton = new UnicodeSet(UnicodeString(u"[:age=3.2:]"), errorCode);
     if(uni32Singleton==nullptr) {
         errorCode=U_MEMORY_ALLOCATION_ERROR;
     } else {
@@ -1105,7 +1108,7 @@ UnicodeSet& UnicodeSet::applyPropertyPattern(const UnicodeString& pattern,
             // support args of (UProperty, char*) then we can remove
             // NAME_PROP and make this a little more efficient.
             valueName = propName;
-            propName = UnicodeString(NAME_PROP, NAME_PROP_LENGTH, US_INV);
+            propName = NAME_PROP;
         }
     }
 

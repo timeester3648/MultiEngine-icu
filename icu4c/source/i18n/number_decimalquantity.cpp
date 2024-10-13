@@ -1082,7 +1082,7 @@ UnicodeString DecimalQuantity::toScientificString() const {
     result.append(u'E');
     int32_t _scale = upperPos + scale + exponent;
     if (_scale == INT32_MIN) {
-        result.append({u"-2147483648", -1});
+        result.append(u"-2147483648");
         return result;
     } else if (_scale < 0) {
         _scale *= -1;

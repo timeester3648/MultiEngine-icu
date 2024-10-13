@@ -1267,37 +1267,6 @@ UBool RBBITest::testCaseIsKnownIssue(const UnicodeString &testCase, const char *
         const char16_t *fString;
     } badTestCases[] = {
         {"10666", "GraphemeBreakTest.txt", u"\u0020\u0020\u0033"},    // Fake example, for illustration.
-        // The following tests were originally for
-        // Issue 8151, move the Finnish tailoring of the line break of hyphens to root.
-        // However, that ticket has been closed as fixed but these tests still fail, so
-        // ICU-21097 has been created to investigate and address these remaining issues.
-        {"21097",  "LineBreakTest.txt", u"-#"},
-        {"21097",  "LineBreakTest.txt", u"\u002d\u0308\u0023"},
-        {"21097",  "LineBreakTest.txt", u"\u002d\u00a7"},
-        {"21097",  "LineBreakTest.txt", u"\u002d\u0308\u00a7"},
-        {"21097",  "LineBreakTest.txt", u"\u002d\U00050005"},
-        {"21097",  "LineBreakTest.txt", u"\u002d\u0308\U00050005"},
-        {"21097",  "LineBreakTest.txt", u"\u002d\u0e01"},
-        {"21097",  "LineBreakTest.txt", u"\u002d\u0308\u0e01"},
-
-        // The following tests were originally for
-        // Issue ICU-12017 Improve line break around numbers.
-        // However, that ticket has been closed as fixed but these tests still fail, so
-        // ICU-21097 has been created to investigate and address these remaining issues.
-        {"21097", "LineBreakTest.txt", u"\u002C\u0030"},   // ",0"
-        {"21097", "LineBreakTest.txt", u"\u002C\u0308\u0030"},
-        {"21097", "LineBreakTest.txt", u"equals .35 cents"},
-        {"21097", "LineBreakTest.txt", u"a.2 "},
-        {"21097", "LineBreakTest.txt", u"a.2 \u0915"},
-        {"21097", "LineBreakTest.txt", u"a.2 \u672C"},
-        {"21097", "LineBreakTest.txt", u"a.2\u3000\u672C"},
-        {"21097", "LineBreakTest.txt", u"a.2\u3000\u307E"},
-        {"21097", "LineBreakTest.txt", u"a.2\u3000\u0033"},
-        {"21097", "LineBreakTest.txt", u"A.1 \uBABB"},
-        {"21097", "LineBreakTest.txt", u"\uBD24\uC5B4\u002E\u0020\u0041\u002E\u0032\u0020\uBCFC"},
-        {"21097", "LineBreakTest.txt", u"\uBD10\uC694\u002E\u0020\u0041\u002E\u0033\u0020\uBABB"},
-        {"21097", "LineBreakTest.txt", u"\uC694\u002E\u0020\u0041\u002E\u0034\u0020\uBABB"},
-        {"21097", "LineBreakTest.txt", u"a.2\u3000\u300C"},
 
         // ICU-22127 until UAX #29 wordbreak is update for the colon changes in ICU-22112,
         // need to skip some tests in WordBreakTest.txt
@@ -4584,7 +4553,7 @@ void RBBITest::RunMonkey(BreakIterator *bi, RBBIMonkeyKind &mk, const char *name
                     UErrorCode status = U_ZERO_ERROR;
                     u_charName(c, U_EXTENDED_CHAR_NAME, cName, sizeof(cName), &status);
 
-                    char buffer[200];
+                    char buffer[280];
                     auto ret = snprintf(buffer, sizeof(buffer),
                              "%4s %3i :  %1s  %1s  %10s  %-*s  %-40s  %-40s",
                              currentLineFlag.c_str(),
@@ -6018,8 +5987,10 @@ void RBBITest::TestExternalBreakEngineWithFakeYue() {
         } while(bi1->next() != BreakIterator::DONE);
     }
 
-    std::vector<int32_t> expected1({{ 0, 1, 2, 4, 5, 8, 10, 12, 13, 14, 15,
-      16, 17, 18, 19, 20, 21, 22, 23, 24, 26, 27, 30}});
+    std::vector<int32_t> expected1{
+        0,  1,  2,  4,  5,  8,  10, 12, 13, 14, 15, 16,
+        17, 18, 19, 20, 21, 22, 23, 24, 26, 27, 30,
+    };
     assertTrue("root break Yue as Chinese", expected1 == actual1);
 
     status = U_ZERO_ERROR;
@@ -6040,8 +6011,10 @@ void RBBITest::TestExternalBreakEngineWithFakeYue() {
             actual2.push_back(bi2->current());
         } while(bi2->next() != BreakIterator::DONE);
     }
-    std::vector<int32_t> expected2({{ 0, 1, 2, 4, 5, 8, 10, 12, 14, 16, 18, 20,
-      22, 23, 24, 26, 27, 30}});
+
+    std::vector<int32_t> expected2{
+        0, 1, 2, 4, 5, 8, 10, 12, 14, 16, 18, 20, 22, 23, 24, 26, 27, 30,
+    };
     assertTrue(WHERE "break Yue by Fake external breaker",
                expected2 == actual2);
 }
@@ -6066,8 +6039,9 @@ void RBBITest::TestExternalBreakEngineWithFakeTaiLe() {
         } while(bi1->next() != BreakIterator::DONE);
     }
 
-    std::vector<int32_t> expected1({{
-      0, 2, 5, 86, 89, 92 }});
+    std::vector<int32_t> expected1{
+        0, 2, 5, 86, 89, 92,
+    };
     assertTrue(WHERE "root break Tai Le", expected1 == actual1);
 
     RuleBasedBreakIterator::registerExternalBreakEngine(
@@ -6087,9 +6061,11 @@ void RBBITest::TestExternalBreakEngineWithFakeTaiLe() {
             actual2.push_back(bi2->current());
         } while(bi2->next() != BreakIterator::DONE);
     }
-    std::vector<int32_t> expected2({{
-         0, 2, 5, 11, 14, 17, 24, 28, 32, 38, 42, 45, 48, 54, 57, 60, 64, 67,
-         70, 73, 76, 80, 86, 89, 92}});
+
+    std::vector<int32_t> expected2{
+        0,  2,  5,  11, 14, 17, 24, 28, 32, 38, 42, 45, 48,
+        54, 57, 60, 64, 67, 70, 73, 76, 80, 86, 89, 92,
+    };
     assertTrue("break Tai Le by Fake external breaker",
                expected2 == actual2);
 }

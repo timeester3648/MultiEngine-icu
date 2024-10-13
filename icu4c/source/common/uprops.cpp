@@ -171,7 +171,7 @@ static UBool defaultContains(const BinaryProperty &prop, UChar32 c, UProperty /*
 }
 
 static UBool caseBinaryPropertyContains(const BinaryProperty &/*prop*/, UChar32 c, UProperty which) {
-    return static_cast<UBool>(ucase_hasBinaryProperty(c, which));
+    return ucase_hasBinaryProperty(c, which);
 }
 
 static UBool isBidiControl(const BinaryProperty &/*prop*/, UChar32 c, UProperty /*which*/) {
@@ -242,7 +242,7 @@ static UBool changesWhenCasefolded(const BinaryProperty &/*prop*/, UChar32 c, UP
     if(c>=0) {
         /* single code point */
         const char16_t *resultString;
-        return static_cast<UBool>(ucase_toFullFolding(c, &resultString, U_FOLD_CASE_DEFAULT) >= 0);
+        return ucase_toFullFolding(c, &resultString, U_FOLD_CASE_DEFAULT) >= 0;
     } else {
         /* guess some large but stack-friendly capacity */
         char16_t dest[2*UCASE_MAX_STRING_LENGTH];
@@ -250,9 +250,9 @@ static UBool changesWhenCasefolded(const BinaryProperty &/*prop*/, UChar32 c, UP
         destLength=u_strFoldCase(dest, UPRV_LENGTHOF(dest),
                                   nfd.getBuffer(), nfd.length(),
                                   U_FOLD_CASE_DEFAULT, &errorCode);
-        return static_cast<UBool>(U_SUCCESS(errorCode) &&
+        return U_SUCCESS(errorCode) &&
                        0!=u_strCompare(nfd.getBuffer(), nfd.length(),
-                                       dest, destLength, false));
+                                       dest, destLength, false);
     }
 }
 #endif
@@ -612,9 +612,9 @@ static int32_t scriptGetMaxValue(const IntProperty &/*prop*/, UProperty /*which*
 
 /*
  * Map some of the Grapheme Cluster Break values to Hangul Syllable Types.
- * Hangul_Syllable_Type is redundant with a subset of Grapheme_Cluster_Break.
+ * Hangul_Syllable_Type used to be fully redundant with a subset of Grapheme_Cluster_Break.
  *
- * Starting with Unicode 16, there is an exception:
+ * Starting with Unicode 16, this is no longer true for HST=V vs. GCB=V in some cases:
  * Some Kirat Rai vowels are given GCB=V for proper grapheme clustering, but
  * they are of course not related to Hangul syllables.
  */

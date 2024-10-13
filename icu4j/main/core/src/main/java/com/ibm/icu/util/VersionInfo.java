@@ -9,8 +9,9 @@
 
 package com.ibm.icu.util;
 
-import com.ibm.icu.impl.ICUData;
 import java.util.concurrent.ConcurrentHashMap;
+
+import com.ibm.icu.impl.ICUData;
 
 /**
  * Class to store version numbers of the form major.minor.milli.micro.
@@ -583,7 +584,7 @@ public final class VersionInfo implements Comparable<VersionInfo>
         UNICODE_15_1   = getInstance(15, 1, 0, 0);
         UNICODE_16_0   = getInstance(16, 0, 0, 0);
 
-        ICU_VERSION   = getInstance(76, 0, 1, 0);
+        ICU_VERSION   = getInstance(76, 1, 0, 0);
         ICU_DATA_VERSION = ICU_VERSION;
         UNICODE_VERSION = UNICODE_16_0;
 

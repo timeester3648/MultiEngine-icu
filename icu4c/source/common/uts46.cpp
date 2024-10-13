@@ -756,7 +756,12 @@ UTS46::processLabel(UnicodeString &dest,
         if(U_FAILURE(errorCode)) {
             return labelLength;
         }
-        if(!isValid) {
+        // Unicode 15.1 UTS #46:
+        // Added an additional condition in 4.1 Validity Criteria to
+        // disallow labels such as xn--xn---epa., which do not round-trip.
+        // --> Validity Criteria new criterion 4:
+        // If not CheckHyphens, the label must not begin with “xn--”.
+        if(!isValid || fromPunycode.startsWith(UnicodeString::readOnlyAlias(u"xn--"))) {
             info.labelErrors|=UIDNA_ERROR_INVALID_ACE_LABEL;
             return markBadACELabel(dest, labelStart, labelLength, toASCII, info, errorCode);
         }
@@ -1361,7 +1366,7 @@ uidna_labelToASCII(const UIDNA *idna,
     if(!checkArgs(label, length, dest, capacity, pInfo, pErrorCode)) {
         return 0;
     }
-    UnicodeString src((UBool)(length<0), label, length);
+    UnicodeString src(length < 0, label, length);
     UnicodeString destString(dest, 0, capacity);
     IDNAInfo info;
     reinterpret_cast<const IDNA *>(idna)->labelToASCII(src, destString, info, *pErrorCode);
@@ -1377,7 +1382,7 @@ uidna_labelToUnicode(const UIDNA *idna,
     if(!checkArgs(label, length, dest, capacity, pInfo, pErrorCode)) {
         return 0;
     }
-    UnicodeString src((UBool)(length<0), label, length);
+    UnicodeString src(length < 0, label, length);
     UnicodeString destString(dest, 0, capacity);
     IDNAInfo info;
     reinterpret_cast<const IDNA *>(idna)->labelToUnicode(src, destString, info, *pErrorCode);
@@ -1393,7 +1398,7 @@ uidna_nameToASCII(const UIDNA *idna,
     if(!checkArgs(name, length, dest, capacity, pInfo, pErrorCode)) {
         return 0;
     }
-    UnicodeString src((UBool)(length<0), name, length);
+    UnicodeString src(length < 0, name, length);
     UnicodeString destString(dest, 0, capacity);
     IDNAInfo info;
     reinterpret_cast<const IDNA *>(idna)->nameToASCII(src, destString, info, *pErrorCode);
@@ -1409,7 +1414,7 @@ uidna_nameToUnicode(const UIDNA *idna,
     if(!checkArgs(name, length, dest, capacity, pInfo, pErrorCode)) {
         return 0;
     }
-    UnicodeString src((UBool)(length<0), name, length);
+    UnicodeString src(length < 0, name, length);
     UnicodeString destString(dest, 0, capacity);
     IDNAInfo info;
     reinterpret_cast<const IDNA *>(idna)->nameToUnicode(src, destString, info, *pErrorCode);

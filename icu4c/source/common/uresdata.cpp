@@ -140,7 +140,7 @@ isAcceptable(void *context,
              const char * /*type*/, const char * /*name*/,
              const UDataInfo *pInfo) {
     uprv_memcpy(context, pInfo->formatVersion, 4);
-    return static_cast<UBool>(
+    return
         pInfo->size>=20 &&
         pInfo->isBigEndian==U_IS_BIG_ENDIAN &&
         pInfo->charsetFamily==U_CHARSET_FAMILY &&
@@ -149,7 +149,7 @@ isAcceptable(void *context,
         pInfo->dataFormat[1]==0x65 &&
         pInfo->dataFormat[2]==0x73 &&
         pInfo->dataFormat[3]==0x42 &&
-        (1<=pInfo->formatVersion[0] && pInfo->formatVersion[0]<=3));
+        (1<=pInfo->formatVersion[0] && pInfo->formatVersion[0]<=3);
 }
 
 /* semi-public functions ---------------------------------------------------- */
@@ -1040,13 +1040,10 @@ enum {
 /* The table item key string is not locally available. */
 static const char *const gUnknownKey="";
 
-/* resource table key for collation binaries: "%%CollationBin" */
-static const char16_t gCollationBinKey[]={
-    0x25, 0x25,
-    0x43, 0x6f, 0x6c, 0x6c, 0x61, 0x74, 0x69, 0x6f, 0x6e,
-    0x42, 0x69, 0x6e,
-    0
-};
+#if !UCONFIG_NO_COLLATION
+// resource table key for collation binaries
+static const char16_t gCollationBinKey[]=u"%%CollationBin";
+#endif
 
 /*
  * swap one resource item

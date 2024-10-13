@@ -31,6 +31,8 @@
 ******************************************************************************
 */
 
+#include <optional>
+#include <string_view>
 #include <utility>
 
 #include "unicode/bytestream.h"
@@ -1570,8 +1572,8 @@ AliasReplacer::replaceTransformedExtensions(
              // Split the "tkey-tvalue" pair string so that we can canonicalize the tvalue.
              *const_cast<char*>(tvalue++) = '\0'; // NUL terminate tkey
              output.append(tfield, status).append('-', status);
-             const char* bcpTValue = ulocimp_toBcpType(tfield, tvalue);
-             output.append((bcpTValue == nullptr) ? tvalue : bcpTValue, status);
+             std::optional<std::string_view> bcpTValue = ulocimp_toBcpType(tfield, tvalue);
+             output.append(bcpTValue.has_value() ? *bcpTValue : tvalue, status);
         }
     }
     if (U_FAILURE(status)) {
@@ -2608,76 +2610,26 @@ Locale::getUnicodeKeywordValue(StringPiece keywordName,
         return;
     }
 
-    // TODO: Remove the need for a const char* to a NUL terminated buffer.
-    const CharString keywordName_nul(keywordName, status);
-    if (U_FAILURE(status)) {
-        return;
-    }
-
-    const char* legacy_key = uloc_toLegacyKey(keywordName_nul.data());
-    if (legacy_key == nullptr) {
+    std::optional<std::string_view> legacy_key = ulocimp_toLegacyKeyWithFallback(keywordName);
+    if (!legacy_key.has_value()) {
         status = U_ILLEGAL_ARGUMENT_ERROR;
         return;
     }
 
-    auto legacy_value = getKeywordValue<CharString>(legacy_key, status);
+    auto legacy_value = getKeywordValue<CharString>(*legacy_key, status);
 
     if (U_FAILURE(status)) {
         return;
     }
 
-    const char* unicode_value = uloc_toUnicodeLocaleType(
-            keywordName_nul.data(), legacy_value.data());
-
-    if (unicode_value == nullptr) {
+    std::optional<std::string_view> unicode_value =
+        ulocimp_toBcpTypeWithFallback(keywordName, legacy_value.toStringPiece());
+    if (!unicode_value.has_value()) {
         status = U_ILLEGAL_ARGUMENT_ERROR;
         return;
     }
 
-    sink.Append(unicode_value, static_cast<int32_t>(uprv_strlen(unicode_value)));
-}
-
-void
-Locale::setKeywordValue(const char* keywordName, const char* keywordValue, UErrorCode &status)
-{
-    if (U_FAILURE(status)) {
-        return;
-    }
-    if (status == U_STRING_NOT_TERMINATED_WARNING) {
-        status = U_ZERO_ERROR;
-    }
-    int32_t bufferLength =
-        uprv_max(static_cast<int32_t>(uprv_strlen(fullName) + 1), ULOC_FULLNAME_CAPACITY);
-    int32_t newLength = uloc_setKeywordValue(keywordName, keywordValue, fullName,
-                                             bufferLength, &status) + 1;
-    U_ASSERT(status != U_STRING_NOT_TERMINATED_WARNING);
-    /* Handle the case the current buffer is not enough to hold the new id */
-    if (status == U_BUFFER_OVERFLOW_ERROR) {
-        U_ASSERT(newLength > bufferLength);
-        char* newFullName = static_cast<char*>(uprv_malloc(newLength));
-        if (newFullName == nullptr) {
-            status = U_MEMORY_ALLOCATION_ERROR;
-            return;
-        }
-        uprv_strcpy(newFullName, fullName);
-        if (fullName != fullNameBuffer) {
-            if (baseName == fullName) {
-                baseName = newFullName; // baseName should not point to freed memory.
-            }
-            // if full Name is already on the heap, need to free it.
-            uprv_free(fullName);
-        }
-        fullName = newFullName;
-        status = U_ZERO_ERROR;
-        uloc_setKeywordValue(keywordName, keywordValue, fullName, newLength, &status);
-        U_ASSERT(status != U_STRING_NOT_TERMINATED_WARNING);
-    } else {
-        U_ASSERT(newLength <= bufferLength);
-    }
-    if (U_SUCCESS(status) && baseName == fullName) {
-        // May have added the first keyword, meaning that the fullName is no longer also the baseName.
-        initBaseName(status);
-    }
+    sink.Append(unicode_value->data(), static_cast<int32_t>(unicode_value->size()));
 }
 
 void
@@ -2685,10 +2637,60 @@ Locale::setKeywordValue(StringPiece keywordName,
                         StringPiece keywordValue,
                         UErrorCode& status) {
     if (U_FAILURE(status)) { return; }
-    // TODO: Remove the need for a const char* to a NUL terminated buffer.
-    const CharString keywordName_nul(keywordName, status);
-    const CharString keywordValue_nul(keywordValue, status);
-    setKeywordValue(keywordName_nul.data(), keywordValue_nul.data(), status);
+    if (keywordName.empty()) {
+        status = U_ILLEGAL_ARGUMENT_ERROR;
+        return;
+    }
+    if (status == U_STRING_NOT_TERMINATED_WARNING) {
+        status = U_ZERO_ERROR;
+    }
+
+    int32_t length = static_cast<int32_t>(uprv_strlen(fullName));
+    int32_t capacity = fullName == fullNameBuffer ? ULOC_FULLNAME_CAPACITY : length + 1;
+
+    const char* start = locale_getKeywordsStart(fullName);
+    int32_t offset = start == nullptr ? length : start - fullName;
+
+    for (;;) {
+        // Remove -1 from the capacity so that this function can guarantee NUL termination.
+        CheckedArrayByteSink sink(fullName + offset, capacity - offset - 1);
+
+        int32_t reslen = ulocimp_setKeywordValue(
+            {fullName + offset, static_cast<std::string_view::size_type>(length - offset)},
+            keywordName,
+            keywordValue,
+            sink,
+            status);
+
+        if (status == U_BUFFER_OVERFLOW_ERROR) {
+            capacity = reslen + offset + 1;
+            char* newFullName = static_cast<char*>(uprv_malloc(capacity));
+            if (newFullName == nullptr) {
+                status = U_MEMORY_ALLOCATION_ERROR;
+                return;
+            }
+            uprv_memcpy(newFullName, fullName, length + 1);
+            if (fullName != fullNameBuffer) {
+                if (baseName == fullName) {
+                    baseName = newFullName; // baseName should not point to freed memory.
+                }
+                // if fullName is already on the heap, need to free it.
+                uprv_free(fullName);
+            }
+            fullName = newFullName;
+            status = U_ZERO_ERROR;
+            continue;
+        }
+
+        if (U_FAILURE(status)) { return; }
+        u_terminateChars(fullName, capacity, reslen + offset, &status);
+        break;
+    }
+
+    if (baseName == fullName) {
+        // May have added the first keyword, meaning that the fullName is no longer also the baseName.
+        initBaseName(status);
+    }
 }
 
 void
@@ -2699,32 +2701,25 @@ Locale::setUnicodeKeywordValue(StringPiece keywordName,
         return;
     }
 
-    // TODO: Remove the need for a const char* to a NUL terminated buffer.
-    const CharString keywordName_nul(keywordName, status);
-    const CharString keywordValue_nul(keywordValue, status);
-    if (U_FAILURE(status)) {
-        return;
-    }
-
-    const char* legacy_key = uloc_toLegacyKey(keywordName_nul.data());
-    if (legacy_key == nullptr) {
+    std::optional<std::string_view> legacy_key = ulocimp_toLegacyKeyWithFallback(keywordName);
+    if (!legacy_key.has_value()) {
         status = U_ILLEGAL_ARGUMENT_ERROR;
         return;
     }
 
-    const char* legacy_value = nullptr;
+    std::string_view value;
 
-    if (!keywordValue_nul.isEmpty()) {
-        legacy_value =
-            uloc_toLegacyType(keywordName_nul.data(), keywordValue_nul.data());
-
-        if (legacy_value == nullptr) {
+    if (!keywordValue.empty()) {
+        std::optional<std::string_view> legacy_value =
+            ulocimp_toLegacyTypeWithFallback(keywordName, keywordValue);
+        if (!legacy_value.has_value()) {
             status = U_ILLEGAL_ARGUMENT_ERROR;
             return;
         }
+        value = *legacy_value;
     }
 
-    setKeywordValue(legacy_key, legacy_value, status);
+    setKeywordValue(*legacy_key, value, status);
 }
 
 const char *

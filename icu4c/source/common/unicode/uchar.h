@@ -533,26 +533,26 @@ typedef enum UProperty {
      * @stable ICU 70
      */
     UCHAR_RGI_EMOJI=71,
-#ifndef U_HIDE_DRAFT_API
     /**
      * Binary property IDS_Unary_Operator.
      * For programmatic determination of Ideographic Description Sequences.
      *
-     * @draft ICU 74
+     * @stable ICU 74
      */
     UCHAR_IDS_UNARY_OPERATOR=72,
     /**
      * Binary property ID_Compat_Math_Start.
      * Used in mathematical identifier profile in UAX #31.
-     * @draft ICU 74
+     * @stable ICU 74
      */
     UCHAR_ID_COMPAT_MATH_START=73,
     /**
      * Binary property ID_Compat_Math_Continue.
      * Used in mathematical identifier profile in UAX #31.
-     * @draft ICU 74
+     * @stable ICU 74
      */
     UCHAR_ID_COMPAT_MATH_CONTINUE=74,
+#ifndef U_HIDE_DRAFT_API
     /**
      * Binary property Modifier_Combining_Mark.
      * Used by the AMTRA algorithm in UAX #53.
@@ -2288,6 +2288,8 @@ typedef enum UJoiningGroup {
 
     U_JG_THIN_YEH,  /**< @stable ICU 70 */
     U_JG_VERTICAL_TAIL,  /**< @stable ICU 70 */
+
+    U_JG_KASHMIRI_YEH,  /**< @stable ICU 76 */
 
 #ifndef U_HIDE_DEPRECATED_API
     /**
